@@ -33,7 +33,12 @@ describe('createServer', () => {
   test('creates server with context', () => {
     const config = new Config({});
     const logger = new Logger(config);
-    const context: ServerContext = { config, logger, dataDir: './data' };
+    const context: ServerContext = {
+      config,
+      logger,
+      dataDir: './data',
+      searcherCache: new Map(),
+    };
 
     const server = createServer(context);
 
@@ -120,15 +125,18 @@ export const BaseSearchParamsSchema = z.object({
   query: z
     .string()
     .min(1, 'Query cannot be empty')
+    .max(500, 'Query too long (max 500 chars)')
     .describe('Natural language search query'),
 
   fields: z
-    .array(z.string())
+    .array(z.string().max(100))
+    .max(20)
     .optional()
     .describe('Specific fields to return. Be token efficient - only request what you need.'),
 
   limit: z
     .number()
+    .int('Limit must be an integer')
     .min(1)
     .max(20)
     .default(5)
@@ -185,6 +193,7 @@ export interface ServerContext {
   config: Config;
   logger: Logger;
   dataDir: string;
+  searcherCache: Map<string, HybridSearcher<Record<string, unknown>>>;
 }
 
 /** Creates and configures the MCP server. */
@@ -215,15 +224,24 @@ export function createServer(context: ServerContext): Server {
   // Handle tool calls
   server.setRequestHandler(CallToolRequestSchema, async (request) => {
     const { name, arguments: args } = request.params;
-    logger.info('Tool called', { tool: name });
+    const toolLogger = logger.child({ tool: name });
+    toolLogger.info('Tool called');
 
     const handler = toolRegistry.getHandler(name as ToolName);
     if (!handler) {
-      throw new Error(`Unknown tool: ${name}`);
+      throw new Error(`Unknown tool: ${name}. Available: ${Object.values(ToolName).join(', ')}`);
     }
 
-    const result = await handler(args, context);
-    return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    try {
+      const result = await handler(args, context);
+      return { content: [{ type: 'text', text: JSON.stringify(result, null, 2) }] };
+    } catch (error) {
+      toolLogger.error('Tool failed', {
+        error: (error as Error).message,
+        stack: (error as Error).stack
+      });
+      throw error;
+    }
   });
 
   // List resources
@@ -246,27 +264,49 @@ export function createServer(context: ServerContext): Server {
     const { uri } = request.params;
     logger.info('Resource requested', { uri });
 
-    if (uri === 'arc-raiders://glossary') {
-      const glossary = await Bun.file('./data/glossary.md').text();
+    // Normalize URI for comparison
+    const normalizedUri = uri.toLowerCase().replace(/\/$/, '');
+
+    if (normalizedUri === 'arc-raiders://glossary') {
+      const glossaryPath = join(context.dataDir, 'glossary.md');
+      const file = Bun.file(glossaryPath);
+
+      if (!await file.exists()) {
+        throw new Error(`Glossary not found at ${glossaryPath}`);
+      }
+
+      const glossary = await file.text();
       return {
         contents: [{ uri, mimeType: 'text/markdown', text: glossary }],
       };
     }
 
-    throw new Error(`Unknown resource: ${uri}`);
+    throw new Error(`Unknown resource: ${uri}. Available: arc-raiders://glossary`);
   });
 
   return server;
 }
 
 /** Starts the MCP server with stdio transport. */
-export async function startServer(context: ServerContext): Promise<void> {
+export async function startServer(context: ServerContext): Promise<{ server: Server; shutdown: () => Promise<void> }> {
   const server = createServer(context);
   const transport = new StdioServerTransport();
+
+  // Setup graceful shutdown
+  const shutdown = async () => {
+    context.logger.info('Shutting down MCP server...');
+    await server.close();
+    context.logger.success('MCP server stopped');
+  };
+
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 
   context.logger.info('Starting MCP server...');
   await server.connect(transport);
   context.logger.success('MCP server running');
+
+  return { server, shutdown };
 }
 ```
 
@@ -382,6 +422,7 @@ const context: ServerContext = {
   config,
   logger,
   dataDir: config.dataDir,
+  searcherCache: new Map(),
 };
 
 startServer(context).catch((error) => {
@@ -431,7 +472,12 @@ describe('searchItems', () => {
   beforeAll(() => {
     const config = new Config({});
     const logger = new Logger(config);
-    context = { config, logger, dataDir: './test/fixtures' };
+    context = {
+      config,
+      logger,
+      dataDir: './test/fixtures',
+      searcherCache: new Map(),
+    };
   });
 
   test('returns results matching query', async () => {
@@ -505,6 +551,23 @@ export const SearchItemsParamsSchema = BaseSearchParamsSchema.extend({
 
 export type SearchItemsParams = z.infer<typeof SearchItemsParamsSchema>;
 
+const FORBIDDEN_PATHS = ['__proto__', 'constructor', 'prototype'];
+const MAX_FIELD_DEPTH = 4;
+
+function validateFieldPath(path: string): void {
+  const parts = path.split('.');
+
+  if (parts.length > MAX_FIELD_DEPTH) {
+    throw new Error(`Field path too deep: ${path}`);
+  }
+
+  for (const part of parts) {
+    if (FORBIDDEN_PATHS.includes(part.toLowerCase())) {
+      throw new Error(`Invalid field path: ${path}`);
+    }
+  }
+}
+
 /** Extracts specified fields from an item. */
 function extractFields(
   item: Record<string, unknown>,
@@ -512,6 +575,11 @@ function extractFields(
 ): Record<string, unknown> {
   if (!fields || fields.length === 0) {
     return item;
+  }
+
+  // Validate all field paths first
+  for (const field of fields) {
+    validateFieldPath(field);
   }
 
   const result: Record<string, unknown> = {};
@@ -531,10 +599,9 @@ function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
   );
 }
 
-let searcherCache: HybridSearcher<Record<string, unknown>> | null = null;
-
-async function getSearcher(context: ServerContext): Promise<HybridSearcher<Record<string, unknown>>> {
-  if (searcherCache) return searcherCache;
+async function getSearcher(context: ServerContext, endpoint: Endpoint): Promise<HybridSearcher<Record<string, unknown>>> {
+  const cached = context.searcherCache.get(endpoint);
+  if (cached) return cached;
 
   const dataPath = join(context.dataDir, 'items');
 
@@ -552,7 +619,7 @@ async function getSearcher(context: ServerContext): Promise<HybridSearcher<Recor
   });
   await embedder.initialize();
 
-  searcherCache = new HybridSearcher(
+  const searcher = new HybridSearcher(
     items,
     embeddings,
     embedder,
@@ -561,7 +628,8 @@ async function getSearcher(context: ServerContext): Promise<HybridSearcher<Recor
     'id'
   );
 
-  return searcherCache;
+  context.searcherCache.set(endpoint, searcher);
+  return searcher;
 }
 
 /** Searches for items using hybrid semantic + fuzzy search. */
@@ -572,7 +640,7 @@ export async function searchItems(
   const validated = SearchItemsParamsSchema.parse(params);
   const { query, fields, limit } = validated;
 
-  const searcher = await getSearcher(context);
+  const searcher = await getSearcher(context, Endpoint.ITEMS);
   const results = await searcher.search(query, limit);
 
   const extracted = results.map(item => extractFields(item, fields));
@@ -664,11 +732,16 @@ export async function getEvents(
   const dataPath = join(context.dataDir, 'events', 'data.json');
   const file = Bun.file(dataPath);
 
+  if (!await file.exists()) {
+    throw new Error('Events data not found. Run: skippy cache');
+  }
+
   const events = await file.json() as Record<string, unknown>[];
+  const stat = await file.stat();
 
   return {
     events,
-    cachedAt: new Date().toISOString(),
+    cachedAt: new Date(stat.mtime).toISOString(),
   };
 }
 ```

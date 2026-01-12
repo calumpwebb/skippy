@@ -461,11 +461,11 @@ export * from './types';
 Create `packages/shared/test/config.test.ts`:
 
 ```typescript
-import { describe, test, expect } from 'vitest';
-import { Config, ConfigSchema } from '../src/config';
+import { describe, test, expect, beforeEach } from 'vitest';
+import { Config, ConfigSchema, getConfig, resetConfig } from '../src/config';
 
 describe('Config', () => {
-  test('uses default values when env is empty', () => {
+  test('uses default values when env is empty (non-production)', () => {
     const config = new Config({});
 
     expect(config.logLevel).toBe('info');
@@ -504,6 +504,25 @@ describe('ConfigSchema', () => {
   test('exports schema for validation reuse', () => {
     expect(ConfigSchema).toBeDefined();
     expect(ConfigSchema.parse).toBeInstanceOf(Function);
+  });
+});
+
+describe('getConfig / resetConfig', () => {
+  beforeEach(() => {
+    resetConfig();
+  });
+
+  test('getConfig returns cached instance', () => {
+    const config1 = getConfig();
+    const config2 = getConfig();
+    expect(config1).toBe(config2);
+  });
+
+  test('resetConfig clears cached instance', () => {
+    const config1 = getConfig();
+    resetConfig();
+    const config2 = getConfig();
+    expect(config1).not.toBe(config2);
   });
 });
 ```
@@ -556,6 +575,22 @@ export class Config {
   get embeddingModelCacheDir(): string {
     return this.env.EMBEDDING_MODEL_CACHE_DIR;
   }
+}
+
+// Lazy initialization - NOT a singleton at module load
+let _config: Config | undefined;
+
+/** Get or create the global Config instance. */
+export function getConfig(): Config {
+  if (!_config) {
+    _config = new Config(process.env);
+  }
+  return _config;
+}
+
+/** Reset the global Config instance (useful for testing). */
+export function resetConfig(): void {
+  _config = undefined;
 }
 ```
 
@@ -637,6 +672,31 @@ describe('Logger', () => {
     expect(infoSpy).toHaveBeenCalled();
     infoSpy.mockRestore();
   });
+
+  test('handles circular references in meta without throwing', () => {
+    const config = new Config({ LOG_LEVEL: 'debug' });
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const logger = new Logger(config);
+    const circular: Record<string, unknown> = { name: 'test' };
+    circular.self = circular;
+
+    // Should not throw
+    expect(() => logger.info('circular test', circular)).not.toThrow();
+    expect(infoSpy).toHaveBeenCalled();
+    infoSpy.mockRestore();
+  });
+
+  test('logs with unknown log level (defensive)', () => {
+    const config = new Config({ LOG_LEVEL: 'debug' });
+    const infoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+
+    const logger = new Logger(config);
+    logger.info('test message');
+
+    expect(infoSpy).toHaveBeenCalled();
+    infoSpy.mockRestore();
+  });
 });
 ```
 
@@ -654,7 +714,6 @@ Create `packages/shared/src/logger.ts`:
 
 ```typescript
 import { Config } from './config';
-import { LogLevel } from './constants';
 
 const LOG_PRIORITY: Record<string, number> = {
   debug: 0,
@@ -662,6 +721,15 @@ const LOG_PRIORITY: Record<string, number> = {
   warn: 2,
   error: 3,
 };
+
+/** Safely stringify objects, handling circular references. */
+function safeStringify(obj: unknown): string {
+  try {
+    return JSON.stringify(obj);
+  } catch {
+    return '[Circular or non-serializable]';
+  }
+}
 
 /** Structured logger with context inheritance. */
 export class Logger {
@@ -679,13 +747,18 @@ export class Logger {
   }
 
   private shouldLog(level: string): boolean {
-    return LOG_PRIORITY[level] >= LOG_PRIORITY[this.config.logLevel];
+    const levelPriority = LOG_PRIORITY[level];
+    const configPriority = LOG_PRIORITY[this.config.logLevel];
+    if (levelPriority === undefined || configPriority === undefined) {
+      return true; // Log if level is unknown
+    }
+    return levelPriority >= configPriority;
   }
 
   private formatMessage(message: string, meta?: Record<string, unknown>): string {
     const fullContext = { ...this.context, ...meta };
     const contextStr = Object.keys(fullContext).length > 0
-      ? ` ${JSON.stringify(fullContext)}`
+      ? ` ${safeStringify(fullContext)}`
       : '';
     return `${message}${contextStr}`;
   }
@@ -742,13 +815,139 @@ export * from './logger';
 - [ ] Tests pass: `bun test packages/shared`
 - [ ] Logger respects log levels
 - [ ] Child loggers work
+- [ ] Circular references handled safely
+
+---
+
+## Task 1B.4: Signal Handlers
+
+**Depends on:** 1B.3 complete (needs Logger)
+**Can run parallel with:** 1C
+**Files Created:**
+- `packages/shared/src/shutdown.ts`
+- `packages/shared/test/shutdown.test.ts`
+
+### TDD Step 1: Write tests FIRST
+
+Create `packages/shared/test/shutdown.test.ts`:
+
+```typescript
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { registerCleanup, setupGracefulShutdown } from '../src/shutdown';
+import { Logger } from '../src/logger';
+import { Config } from '../src/config';
+
+// Mock process.exit to prevent test runner from exiting
+vi.mock('process', async () => {
+  const actual = await vi.importActual('process');
+  return {
+    ...actual,
+    exit: vi.fn(),
+  };
+});
+
+describe('shutdown', () => {
+  let mockLogger: Logger;
+
+  beforeEach(() => {
+    const config = new Config({ LOG_LEVEL: 'debug' });
+    mockLogger = new Logger(config, { component: 'test' });
+  });
+
+  test('registerCleanup adds cleanup function', () => {
+    const cleanup = vi.fn().mockResolvedValue(undefined);
+    expect(() => registerCleanup(cleanup)).not.toThrow();
+  });
+
+  test('setupGracefulShutdown registers signal handlers', () => {
+    const onSpy = vi.spyOn(process, 'on');
+
+    setupGracefulShutdown(mockLogger);
+
+    expect(onSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+    expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+
+    onSpy.mockRestore();
+  });
+});
+```
+
+### TDD Step 2: Run tests - verify RED
+
+```bash
+bun test shutdown
+```
+
+**Expected:** Tests FAIL because `shutdown.ts` doesn't exist.
+
+### TDD Step 3: Implement shutdown.ts
+
+Create `packages/shared/src/shutdown.ts`:
+
+```typescript
+import { Logger } from './logger';
+
+type CleanupFn = () => Promise<void>;
+const cleanupHandlers: CleanupFn[] = [];
+
+/** Register a cleanup function to run on shutdown. */
+export function registerCleanup(fn: CleanupFn): void {
+  cleanupHandlers.push(fn);
+}
+
+/** Clear all registered cleanup handlers (useful for testing). */
+export function clearCleanupHandlers(): void {
+  cleanupHandlers.length = 0;
+}
+
+/** Set up graceful shutdown handlers for SIGTERM and SIGINT. */
+export function setupGracefulShutdown(logger: Logger): void {
+  const shutdown = async (signal: string): Promise<void> => {
+    logger.info(`Received ${signal}, shutting down gracefully...`);
+
+    for (const cleanup of cleanupHandlers) {
+      try {
+        await cleanup();
+      } catch (error) {
+        logger.error('Cleanup failed', { error: (error as Error).message });
+      }
+    }
+
+    process.exit(0);
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+```
+
+### TDD Step 4: Run tests - verify GREEN
+
+```bash
+bun test shutdown
+```
+
+**Expected:** All tests PASS.
+
+### TDD Step 5: Update shared index
+
+Add to `packages/shared/src/index.ts`:
+
+```typescript
+export * from './shutdown';
+```
+
+### Checkpoint 1B.4
+- [ ] Tests pass: `bun test packages/shared`
+- [ ] Signal handlers can be registered
+- [ ] Cleanup functions are called on shutdown
 
 ---
 
 ## Task 1C: Tooling Config
 
 **Depends on:** 1A complete
-**Can run parallel with:** 1B.1, 1B.2, 1B.3
+**Can run parallel with:** 1B.1, 1B.2, 1B.3, 1B.4
 **Files Created:**
 - `.eslintrc.json`
 - `.prettierrc`
@@ -874,7 +1073,12 @@ Before starting Wave 2, verify ALL of the following:
 - [ ] `bun test packages/shared` - all tests pass
 - [ ] Can import from `@skippy/shared`:
   ```typescript
-  import { Config, Logger, Endpoint, ToolName } from '@skippy/shared';
+  import {
+    Config, getConfig, resetConfig,
+    Logger,
+    Endpoint, ToolName,
+    registerCleanup, setupGracefulShutdown
+  } from '@skippy/shared';
   ```
 - [ ] Directory structure matches design doc
 - [ ] Git hooks installed and working

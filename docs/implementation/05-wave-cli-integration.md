@@ -476,6 +476,243 @@ EMBEDDING_MODEL_CACHE_DIR=./models
 
 ---
 
+## Task 5D: Production Hardening
+
+**Depends on:** Tasks 5A-5C complete
+**Files Modified:**
+- `apps/cli/src/commands/cache.ts`
+- `apps/cli/src/commands/mcp.ts`
+- `apps/cli/src/index.ts`
+- `test/integration/health.test.ts`
+
+### Step 1: Add path validation utility
+
+Create `apps/cli/src/utils/validate.ts`:
+
+```typescript
+import { resolve, isAbsolute } from 'node:path';
+import { access, constants } from 'node:fs/promises';
+
+async function validateDataDir(dataDir: string): Promise<string> {
+  // Resolve to absolute path
+  const resolved = resolve(dataDir);
+
+  // Reject path traversal attempts
+  if (dataDir.includes('..')) {
+    throw new Error('Path traversal not allowed in --data-dir');
+  }
+
+  // Check if directory exists and is writable
+  try {
+    await access(resolved, constants.W_OK);
+  } catch {
+    throw new Error(`Data directory not writable: ${resolved}`);
+  }
+
+  return resolved;
+}
+```
+
+### Step 2: Add error type guard helper
+
+Add to `apps/cli/src/utils/validate.ts`:
+
+```typescript
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  if (typeof error === 'string') {
+    return error;
+  }
+  return 'Unknown error';
+}
+```
+
+### Step 3: Update cache command with proper error handling
+
+Update `apps/cli/src/commands/cache.ts`:
+
+```typescript
+import { Command } from 'commander';
+import { Config, Logger } from '@skippy/shared';
+import { runCache } from '@skippy/cache';
+import pc from 'picocolors';
+
+export function createCacheCommand(): Command {
+  const command = new Command('cache')
+    .description('Download and process game data from MetaForge API')
+    .option('-d, --data-dir <path>', 'Data directory', './data')
+    .option('--no-types', 'Skip TypeScript type generation')
+    .option('--no-fixtures', 'Skip test fixture generation')
+    .option('--dry-run', 'Show what would be done without making changes')
+    .action(async (options) => {
+      const config = getConfig();
+      const logger = new Logger(config);
+
+      // Validate data directory
+      let dataDir: string;
+      try {
+        dataDir = await validateDataDir(options.dataDir);
+      } catch (error) {
+        console.error(pc.red('✗'), (error as Error).message);
+        process.exitCode = 1;
+        return;
+      }
+
+      console.log(pc.cyan('╔═══════════════════════════════════════╗'));
+      console.log(pc.cyan('║') + '       Skippy Cache Updater           ' + pc.cyan('║'));
+      console.log(pc.cyan('╚═══════════════════════════════════════╝'));
+      console.log();
+
+      if (options.dryRun) {
+        console.log(pc.yellow('DRY RUN - no changes will be made'));
+      }
+
+      try {
+        await runCache(config, logger, {
+          dataDir,
+          generateTypes: options.types,
+          generateFixtures: options.fixtures,
+          dryRun: options.dryRun,
+        });
+
+        console.log();
+        console.log(pc.green('✓ Cache update complete!'));
+      } catch (error) {
+        if (error instanceof Error) {
+          logger.error('Cache failed', { error: error.message, stack: error.stack });
+          console.error(pc.red('✗ Cache update failed:'), error.message);
+        } else {
+          console.error(pc.red('✗ Cache update failed with unknown error'));
+        }
+        process.exitCode = 1;
+      }
+    });
+
+  return command;
+}
+```
+
+### Step 4: Update MCP command with graceful shutdown
+
+Update `apps/cli/src/commands/mcp.ts`:
+
+```typescript
+import { Command } from 'commander';
+import { Config, Logger } from '@skippy/shared';
+import { startServer } from '@skippy/mcp-server';
+import pc from 'picocolors';
+
+export function createMcpCommand(): Command {
+  const command = new Command('mcp')
+    .description('Start the MCP server for Claude integration')
+    .option('-d, --data-dir <path>', 'Data directory', './data')
+    .action(async (options) => {
+      const config = getConfig();
+      const logger = new Logger(config);
+
+      // Validate data directory
+      let dataDir: string;
+      try {
+        dataDir = await validateDataDir(options.dataDir);
+      } catch (error) {
+        // Log to stderr since stdout is for MCP protocol
+        console.error(pc.red('Error:'), (error as Error).message);
+        process.exitCode = 1;
+        return;
+      }
+
+      try {
+        const { shutdown } = await startServer({
+          config,
+          logger,
+          dataDir,
+          searcherCache: new Map(),
+        });
+
+        // Graceful shutdown is now handled by startServer
+        // but we can add additional cleanup here if needed
+
+      } catch (error) {
+        if (error instanceof Error) {
+          console.error('MCP server failed:', error.message);
+        } else {
+          console.error('MCP server failed with unknown error');
+        }
+        process.exitCode = 1;
+      }
+    });
+
+  return command;
+}
+```
+
+### Step 5: Update index.ts to read version from package.json
+
+Update `apps/cli/src/index.ts`:
+
+```typescript
+#!/usr/bin/env bun
+import { Command } from 'commander';
+import { createCacheCommand } from './commands/cache';
+import { createMcpCommand } from './commands/mcp';
+
+// Read version from package.json
+const pkg = await Bun.file(new URL('../package.json', import.meta.url)).json();
+
+export const program = new Command()
+  .name('skippy')
+  .description('Arc Raiders game data tools')
+  .version(pkg.version);
+
+export { createCacheCommand, createMcpCommand };
+
+program.addCommand(createCacheCommand());
+program.addCommand(createMcpCommand());
+
+// Only parse if run directly (not imported for testing)
+if (import.meta.main) {
+  program.parse();
+}
+```
+
+### Step 6: Add health check integration test
+
+Create `test/integration/health.test.ts`:
+
+```typescript
+import { describe, test, expect } from 'vitest';
+import { Config, Logger } from '@skippy/shared';
+import { loadEmbeddings } from '@skippy/search';
+
+describe('Server Health', () => {
+  test('server initializes with valid data', async () => {
+    const config = getConfig();
+    const logger = new Logger(config);
+
+    // Verify data files exist
+    const itemsFile = Bun.file('./data/items/data.json');
+    expect(await itemsFile.exists()).toBe(true);
+
+    // Verify embeddings are loadable
+    const { embeddings, dimension } = await loadEmbeddings('./data/items/embeddings.bin');
+    expect(dimension).toBe(384);
+    expect(embeddings.length).toBeGreaterThan(0);
+  });
+});
+```
+
+### Checkpoint 5D
+- [ ] Path validation rejects `..` traversal
+- [ ] CLI uses `process.exitCode` instead of `process.exit()`
+- [ ] Cache command supports `--dry-run` flag
+- [ ] MCP command handles graceful shutdown
+- [ ] Version is read from package.json
+- [ ] Health check test passes
+
+---
+
 ## Wave 5 Complete Checklist
 
 Before marking project DONE, verify ALL:
