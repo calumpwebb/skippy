@@ -1,0 +1,29 @@
+import { describe, test, expect, vi, beforeEach, afterEach } from 'vitest';
+import { registerCleanup, setupGracefulShutdown } from '../src/shutdown';
+import { Logger } from '../src/logger';
+import { Config } from '../src/config';
+
+describe('shutdown', () => {
+  let mockLogger: Logger;
+
+  beforeEach(() => {
+    const config = new Config({ LOG_LEVEL: 'debug' });
+    mockLogger = new Logger(config, { component: 'test' });
+  });
+
+  test('registerCleanup adds cleanup function', () => {
+    const cleanup = vi.fn().mockResolvedValue(undefined);
+    expect(() => registerCleanup(cleanup)).not.toThrow();
+  });
+
+  test('setupGracefulShutdown registers signal handlers', () => {
+    const onSpy = vi.spyOn(process, 'on');
+
+    setupGracefulShutdown(mockLogger);
+
+    expect(onSpy).toHaveBeenCalledWith('SIGTERM', expect.any(Function));
+    expect(onSpy).toHaveBeenCalledWith('SIGINT', expect.any(Function));
+
+    onSpy.mockRestore();
+  });
+});

@@ -1,0 +1,11 @@
+$ vitest run
+[33mThe CJS build of Vite's Node API is deprecated. See https://vite.dev/guide/troubleshooting.html#vite-cjs-node-api-deprecated for more details.[39m
+
+ RUN  v1.6.1 /Users/calum/Development/skippy/.worktrees/implementation-grok/apps/cli
+
+include: **/*.test.ts
+exclude:  **/node_modules/**, **/dist/**, **/cypress/**, **/.{idea,git,cache,output,temp}/**, **/{karma,rollup,webpack,vite,vitest,jest,ava,babel,nyc,cypress,tsup,build,eslint,prettier}.config.*
+watch exclude:  **/node_modules/**, **/dist/**
+
+No test files found, exiting with code 1
+error: script "test" exited with code 1

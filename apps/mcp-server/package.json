@@ -1,0 +1,23 @@
+{
+  "name": "@skippy/mcp-server",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@skippy/shared": "workspace:*",
+    "@skippy/search": "workspace:*",
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod-to-json-schema": "^3.23.0",
+    "zod-validation-error": "^3.3.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.6.0",
+    "typescript": "^5.4.0"
+  }
+}

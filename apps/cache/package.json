@@ -1,0 +1,23 @@
+{
+  "name": "@skippy/cache",
+  "version": "0.0.1",
+  "type": "module",
+  "main": "./src/index.ts",
+  "scripts": {
+    "start": "bun run src/index.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  },
+  "dependencies": {
+    "@skippy/shared": "workspace:*",
+    "@skippy/search": "workspace:*",
+    "cli-progress": "^3.12.0",
+    "p-limit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/cli-progress": "^3.11.0",
+    "vitest": "^1.6.0",
+    "typescript": "^5.4.0"
+  }
+}
