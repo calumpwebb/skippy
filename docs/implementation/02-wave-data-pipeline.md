@@ -64,6 +64,7 @@ describe('downloadEndpoint', () => {
       ok: false,
       status: 404,
       statusText: 'Not Found',
+      headers: new Map(),
     });
 
     await expect(downloadEndpoint(Endpoint.ITEMS)).rejects.toThrow('404');
@@ -74,11 +75,87 @@ describe('downloadEndpoint', () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
       json: async () => mockData,
+      headers: new Map(),
     });
 
     const result = await downloadEndpoint(Endpoint.ITEMS);
 
     expect(result).toEqual(mockData);
+  });
+
+  test('retries on server error then succeeds', async () => {
+    const mockData = { items: [] };
+    mockFetch
+      .mockResolvedValueOnce({
+        ok: false,
+        status: 500,
+        statusText: 'Internal Server Error',
+        headers: new Map(),
+      })
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+        headers: new Map(),
+      });
+
+    const result = await downloadEndpoint(Endpoint.ITEMS);
+
+    expect(result).toEqual(mockData);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('does not retry on client error (4xx)', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      statusText: 'Bad Request',
+      headers: new Map(),
+    });
+
+    await expect(downloadEndpoint(Endpoint.ITEMS)).rejects.toThrow('Client error 400');
+    expect(mockFetch).toHaveBeenCalledTimes(1);
+  });
+
+  test('retries on timeout then succeeds', async () => {
+    const mockData = { items: [] };
+    const abortError = new Error('Aborted');
+    abortError.name = 'AbortError';
+
+    mockFetch
+      .mockRejectedValueOnce(abortError)
+      .mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockData,
+        headers: new Map(),
+      });
+
+    const result = await downloadEndpoint(Endpoint.ITEMS);
+
+    expect(result).toEqual(mockData);
+    expect(mockFetch).toHaveBeenCalledTimes(2);
+  });
+
+  test('throws after max retries exceeded', async () => {
+    mockFetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      statusText: 'Internal Server Error',
+      headers: new Map(),
+    });
+
+    await expect(downloadEndpoint(Endpoint.ITEMS)).rejects.toThrow('Server error 500');
+    expect(mockFetch).toHaveBeenCalledTimes(3); // MAX_RETRIES = 3
+  });
+
+  test('rejects response over 50MB', async () => {
+    const headers = new Map([['content-length', String(60 * 1024 * 1024)]]);
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      headers: { get: (key: string) => headers.get(key) },
+      json: async () => ({}),
+    });
+
+    await expect(downloadEndpoint(Endpoint.ITEMS)).rejects.toThrow('Response too large');
   });
 });
 
@@ -151,22 +228,65 @@ import { Endpoint } from '@skippy/shared';
 
 export const METAFORGE_BASE_URL = 'https://metaforge.gg/api/arc-raiders';
 
+const FETCH_TIMEOUT_MS = 30000;
+const MAX_RETRIES = 3;
+const RETRY_DELAYS = [1000, 2000, 4000];
+
 /** Downloads data from a MetaForge API endpoint. */
 export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
   const url = `${METAFORGE_BASE_URL}/${endpoint}`;
 
-  const response = await fetch(url, {
-    headers: {
-      'Accept': 'application/json',
-      'User-Agent': 'Skippy/1.0',
-    },
-  });
+  for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
-  if (!response.ok) {
-    throw new Error(`Failed to download ${endpoint}: ${response.status} ${response.statusText}`);
+    try {
+      const response = await fetch(url, {
+        headers: {
+          'Accept': 'application/json',
+          'User-Agent': 'Skippy/1.0',
+        },
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeoutId);
+
+      if (!response.ok) {
+        // Don't retry 4xx errors
+        if (response.status >= 400 && response.status < 500) {
+          throw new Error(`Client error ${response.status}: ${response.statusText}`);
+        }
+        throw new Error(`Server error ${response.status}: ${response.statusText}`);
+      }
+
+      // Check content length to prevent OOM
+      const contentLength = response.headers.get('content-length');
+      if (contentLength && parseInt(contentLength) > 50 * 1024 * 1024) {
+        throw new Error('Response too large (>50MB)');
+      }
+
+      return response.json();
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (attempt < MAX_RETRIES - 1 && shouldRetry(error)) {
+        await sleep(RETRY_DELAYS[attempt]);
+        continue;
+      }
+      throw error;
+    }
   }
+}
 
-  return response.json();
+function shouldRetry(error: unknown): boolean {
+  if (error instanceof Error) {
+    return error.name === 'AbortError' || error.message.includes('Server error');
+  }
+  return false;
+}
+
+function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 /** Extracts the data array from API response wrapper. */
@@ -300,6 +420,20 @@ describe('extractFieldPaths', () => {
     const paths = extractFieldPaths('string');
     expect(paths).toEqual([]);
   });
+
+  test('stops at MAX_DEPTH to prevent infinite recursion', () => {
+    // Create deeply nested object (12 levels deep)
+    let obj: Record<string, unknown> = { value: 'leaf' };
+    for (let i = 0; i < 12; i++) {
+      obj = { nested: obj };
+    }
+
+    const paths = extractFieldPaths(obj);
+
+    // Should stop at depth 10, so we won't see the deepest 'value' field
+    expect(paths).toContain('nested');
+    expect(paths).not.toContain('nested.nested.nested.nested.nested.nested.nested.nested.nested.nested.nested.value');
+  });
 });
 
 describe('generateSchema', () => {
@@ -363,8 +497,11 @@ export interface Schema {
   fields: string[];
 }
 
+const MAX_DEPTH = 10;
+
 /** Recursively extracts all field paths from an object. */
-export function extractFieldPaths(obj: unknown, prefix: string = ''): string[] {
+export function extractFieldPaths(obj: unknown, prefix: string = '', depth: number = 0): string[] {
+  if (depth > MAX_DEPTH) return [];
   if (obj === null || typeof obj !== 'object') {
     return [];
   }
@@ -373,7 +510,7 @@ export function extractFieldPaths(obj: unknown, prefix: string = ''): string[] {
     // For arrays, extract paths from first non-null element
     const firstItem = obj.find(item => item !== null && item !== undefined);
     if (firstItem && typeof firstItem === 'object') {
-      return extractFieldPaths(firstItem, prefix);
+      return extractFieldPaths(firstItem, prefix, depth + 1);
     }
     return [];
   }
@@ -387,7 +524,7 @@ export function extractFieldPaths(obj: unknown, prefix: string = ''): string[] {
 
     const value = record[key];
     if (value !== null && typeof value === 'object') {
-      paths.push(...extractFieldPaths(value, fullPath));
+      paths.push(...extractFieldPaths(value, fullPath, depth + 1));
     }
   }
 
@@ -789,6 +926,7 @@ bun test generate-test-fixtures
 
 **Depends on:** 2A, 2B, 2C, 2D complete
 **Files Created:**
+- `packages/shared/src/utils/atomic-write.ts`
 - `apps/cache/src/index.ts`
 
 ### TDD Step 1: Write integration test FIRST
@@ -797,7 +935,7 @@ Create `apps/cache/test/index.test.ts`:
 
 ```typescript
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { runCache, CacheOptions } from '../src/index';
+import { runCache, CacheOptions, CacheResult } from '../src/index';
 import { Endpoint } from '@skippy/shared';
 
 // We test the orchestration logic, not the actual downloads
@@ -817,27 +955,73 @@ describe('runCache', () => {
     expect(defaults.dataDir).toBe('./data');
     expect(defaults.endpoints).toHaveLength(5);
   });
+
+  test('CacheResult interface has expected shape', () => {
+    const successResult: CacheResult = {
+      endpoint: Endpoint.ITEMS,
+      success: true,
+      itemCount: 100,
+    };
+
+    const failureResult: CacheResult = {
+      endpoint: Endpoint.ARCS,
+      success: false,
+      error: 'Connection timeout',
+    };
+
+    expect(successResult.success).toBe(true);
+    expect(failureResult.success).toBe(false);
+    expect(failureResult.error).toBe('Connection timeout');
+  });
 });
 ```
 
-### TDD Step 2: Implement index.ts
+### TDD Step 2: Create atomic write helper
+
+First, create `packages/shared/src/utils/atomic-write.ts`:
+
+```typescript
+import { rename } from 'node:fs/promises';
+
+/** Writes content to a file atomically using rename. */
+export async function atomicWrite(path: string, content: string | Uint8Array): Promise<void> {
+  const tempPath = `${path}.tmp.${Date.now()}`;
+  await Bun.write(tempPath, content);
+  await rename(tempPath, path);
+}
+```
+
+Export from shared package in `packages/shared/src/index.ts`:
+
+```typescript
+export { atomicWrite } from './utils/atomic-write';
+```
+
+### TDD Step 3: Implement index.ts
 
 Create `apps/cache/src/index.ts`:
 
 ```typescript
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Endpoint, Config, Logger } from '@skippy/shared';
+import { Endpoint, Config, Logger, atomicWrite } from '@skippy/shared';
 import { downloadAndNormalize } from './download';
-import { generateSchema, writeSchema } from './generate-schema';
-import { generateTypeScript, writeTypes } from './generate-types';
-import { createFixture, writeFixture } from './generate-test-fixtures';
+import { generateSchema } from './generate-schema';
+import { generateTypeScript } from './generate-types';
+import { createFixture } from './generate-test-fixtures';
 
 export interface CacheOptions {
   dataDir: string;
   endpoints: Endpoint[];
   generateTypes: boolean;
   generateFixtures: boolean;
+}
+
+export interface CacheResult {
+  endpoint: Endpoint;
+  success: boolean;
+  error?: string;
+  itemCount?: number;
 }
 
 const DEFAULT_OPTIONS: CacheOptions = {
@@ -852,11 +1036,13 @@ export async function runCache(
   config: Config,
   logger: Logger,
   options: Partial<CacheOptions> = {}
-): Promise<void> {
+): Promise<CacheResult[]> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { dataDir, endpoints } = opts;
 
   logger.info('Starting cache update', { dataDir, endpoints: endpoints.length });
+
+  const results: CacheResult[] = [];
 
   for (const endpoint of endpoints) {
     const endpointDir = join(dataDir, endpoint);
@@ -870,14 +1056,14 @@ export async function runCache(
       const data = await downloadAndNormalize(endpoint);
       endpointLogger.success(`Downloaded ${data.length} items`);
 
-      // 2. Write data
+      // 2. Write data atomically
       const dataPath = join(endpointDir, 'data.json');
-      await Bun.write(dataPath, JSON.stringify(data, null, 2));
+      await atomicWrite(dataPath, JSON.stringify(data, null, 2));
 
-      // 3. Generate and write schema
+      // 3. Generate and write schema atomically
       const schema = generateSchema(data);
       const schemaPath = join(endpointDir, 'schema.json');
-      await writeSchema(schema, schemaPath);
+      await atomicWrite(schemaPath, JSON.stringify(schema, null, 2));
       endpointLogger.success(`Generated schema with ${schema.fields.length} fields`);
 
       // 4. Generate types (if enabled)
@@ -887,7 +1073,8 @@ export async function runCache(
         const typesDir = join('packages/shared/src/types');
         await mkdir(typesDir, { recursive: true });
         const typesPath = join(typesDir, `${endpoint}.ts`);
-        await writeTypes(types, typesPath);
+        const header = '// Auto-generated by @skippy/cache - do not edit manually\n\n';
+        await atomicWrite(typesPath, header + types);
         endpointLogger.success(`Generated types: ${typeName}`);
       }
 
@@ -897,16 +1084,30 @@ export async function runCache(
         await mkdir(fixturesDir, { recursive: true });
         const fixture = createFixture(data);
         const fixturePath = join(fixturesDir, `${endpoint}.json`);
-        await writeFixture(fixture, fixturePath);
+        await atomicWrite(fixturePath, JSON.stringify(fixture, null, 2));
         endpointLogger.success(`Generated fixture with ${fixture.length} items`);
       }
+
+      results.push({ endpoint, success: true, itemCount: data.length });
     } catch (error) {
-      endpointLogger.error('Failed', { error: (error as Error).message });
-      throw error;
+      const errorMessage = (error as Error).message;
+      endpointLogger.error('Failed', { error: errorMessage });
+      results.push({ endpoint, success: false, error: errorMessage });
+      // Continue to next endpoint instead of throwing
     }
   }
 
-  logger.success('Cache update complete');
+  // Report summary
+  const failures = results.filter(r => !r.success);
+  if (failures.length > 0) {
+    logger.error(`Cache update completed with ${failures.length} failure(s)`, {
+      failed: failures.map(f => f.endpoint),
+    });
+  } else {
+    logger.success('Cache update complete');
+  }
+
+  return results;
 }
 
 function endpointToTypeName(endpoint: Endpoint): string {
@@ -925,16 +1126,23 @@ if (import.meta.main) {
   const config = new Config(process.env);
   const logger = new Logger(config);
 
-  runCache(config, logger).catch(error => {
-    logger.error('Cache failed', { error: error.message });
-    process.exit(1);
-  });
+  runCache(config, logger)
+    .then(results => {
+      const failures = results.filter(r => !r.success);
+      if (failures.length > 0) {
+        process.exit(1);
+      }
+    })
+    .catch(error => {
+      logger.error('Cache failed', { error: error.message });
+      process.exit(1);
+    });
 }
 
-export { CacheOptions };
+export { CacheOptions, CacheResult };
 ```
 
-### TDD Step 3: Run tests - verify GREEN
+### TDD Step 4: Run tests - verify GREEN
 
 ```bash
 bun test apps/cache

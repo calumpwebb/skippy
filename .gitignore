@@ -1,10 +1,30 @@
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-.pytest_cache/
-.mypy_cache/
-.ruff_cache/
+# Dependencies
+node_modules/
 
-# uv
-.venv/
+# Build outputs
+dist/
+*.tsbuildinfo
+
+# Environment
+.env
+.env.local
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+
+# Logs
+*.log
+
+# Cache
+.turbo/
+.cache/
+
+# Models (downloaded at runtime)
+models/
+
+# Worktrees
+.worktrees/

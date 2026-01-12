@@ -17,9 +17,10 @@
 9. [Configuration Management](#configuration-management)
 10. [Testing Strategy](#testing-strategy)
 11. [Error Handling & Logging](#error-handling--logging)
-12. [Code Standards](#code-standards)
-13. [Migration from Python](#migration-from-python)
-14. [Implementation Phases](#implementation-phases)
+12. [Production Hardening](#production-hardening)
+13. [Code Standards](#code-standards)
+14. [Migration from Python](#migration-from-python)
+15. [Implementation Phases](#implementation-phases)
 
 ---
 
@@ -462,10 +463,19 @@ test('cosine similarity of orthogonal vectors is 0', () => {
 
 // 4. Real implementation (GREEN)
 function cosineSimilarity(a: number[], b: number[]): number {
-  const dotProduct = a.reduce((sum, val, i) => sum + val * b[i], 0);
+  const dot = a.reduce((sum, val, i) => sum + val * b[i], 0);
   const magA = Math.sqrt(a.reduce((sum, val) => sum + val * val, 0));
   const magB = Math.sqrt(b.reduce((sum, val) => sum + val * val, 0));
-  return dotProduct / (magA * magB);
+
+  // Guard against near-zero magnitudes to prevent NaN
+  if (magA < Number.EPSILON || magB < Number.EPSILON) {
+    return 0;
+  }
+
+  const result = dot / (magA * magB);
+
+  // Guard against NaN from floating point errors
+  return Number.isNaN(result) ? 0 : result;
 }
 // PASS
 
@@ -479,7 +489,18 @@ function magnitude(vec: number[]): number {
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {
-  return dotProduct(a, b) / (magnitude(a) * magnitude(b));
+  const magA = magnitude(a);
+  const magB = magnitude(b);
+
+  // Guard against near-zero magnitudes to prevent NaN
+  if (magA < Number.EPSILON || magB < Number.EPSILON) {
+    return 0;
+  }
+
+  const result = dotProduct(a, b) / (magA * magB);
+
+  // Guard against NaN from floating point errors
+  return Number.isNaN(result) ? 0 : result;
 }
 // STILL PASS - refactor successful
 ```
@@ -756,11 +777,49 @@ data/
 ```
 
 **Storage Format:**
-- `embeddings.bin` - Float32Array binary format
+- `embeddings.bin` - Binary format with header for versioning:
+  ```
+  embeddings.bin format:
+  - 4 bytes: magic number "EMBD" (0x454D4244)
+  - 2 bytes: version (uint16, currently 1)
+  - 2 bytes: dimensions (uint16, e.g., 384 for MiniLM)
+  - 4 bytes: item count (uint32)
+  - Rest: Float32Array of vectors (count * dimensions * 4 bytes)
+  ```
 - `index.json` - Maps array index to entity ID
   ```json
   ["item-1", "item-2", "item-3"]
   ```
+
+**Reading embeddings with version check:**
+```typescript
+export function readEmbeddings(buffer: ArrayBuffer): {
+  version: number;
+  dimensions: number;
+  vectors: Float32Array;
+} {
+  const view = new DataView(buffer);
+
+  // Verify magic number
+  const magic = view.getUint32(0, false);  // Big-endian
+  if (magic !== 0x454D4244) {  // "EMBD"
+    throw new Error('Invalid embeddings file format');
+  }
+
+  const version = view.getUint16(4, true);  // Little-endian
+  const dimensions = view.getUint16(6, true);
+  const count = view.getUint32(8, true);
+
+  // Version compatibility check
+  if (version > 1) {
+    throw new Error(`Unsupported embeddings version: ${version}`);
+  }
+
+  const vectors = new Float32Array(buffer, 12, count * dimensions);
+
+  return { version, dimensions, vectors };
+}
+```
 
 **Design Decision:** Precompute embeddings during cache download rather than on-demand. Makes searches instant (no embedding overhead) and commits embeddings to git for "batteries included" experience.
 
@@ -1021,6 +1080,106 @@ const results = await index.queryItems(queryEmbedding, limit);
 
 **Design Decision:** Use vectra over naive cosine similarity. Dataset is small now (519 items) but scales better as game grows. Negligible overhead for current size.
 
+### Embedder Class with Resource Management
+
+**Dispose pattern and initialization lock for safe async initialization:**
+
+```typescript
+// packages/search/src/embedder.ts
+
+export class Embedder {
+  private pipeline: Pipeline | null = null;
+  private initPromise: Promise<void> | null = null;
+  private disposed: boolean = false;
+
+  constructor(
+    private readonly modelName: string,
+    private readonly cacheDir: string
+  ) {}
+
+  /** Initialize the model (safe to call multiple times concurrently). */
+  async initialize(): Promise<void> {
+    if (this.disposed) {
+      throw new Error('Embedder has been disposed');
+    }
+
+    // Initialization lock - only one initialization runs at a time
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = this.doInitialize();
+    return this.initPromise;
+  }
+
+  private async doInitialize(): Promise<void> {
+    const { pipeline } = await import('@xenova/transformers');
+    this.pipeline = await pipeline('feature-extraction', this.modelName, {
+      cache_dir: this.cacheDir
+    });
+  }
+
+  /** Generate embeddings for text. */
+  async embed(text: string): Promise<number[]> {
+    if (this.disposed) {
+      throw new Error('Embedder has been disposed');
+    }
+
+    if (!this.pipeline) {
+      await this.initialize();
+    }
+
+    const result = await this.pipeline!(text, {
+      pooling: 'mean',
+      normalize: true
+    });
+
+    return Array.from(result.data as Float32Array);
+  }
+
+  /** Release resources. */
+  async dispose(): Promise<void> {
+    if (this.disposed) {
+      return;
+    }
+
+    this.disposed = true;
+    this.pipeline = null;
+    this.initPromise = null;
+
+    // Force garbage collection hint (model can be 80MB+)
+    if (global.gc) {
+      global.gc();
+    }
+  }
+
+  /** Check if embedder is ready. */
+  isReady(): boolean {
+    return this.pipeline !== null && !this.disposed;
+  }
+}
+```
+
+**Usage with try-finally for cleanup:**
+
+```typescript
+const embedder = new Embedder(config.embeddingModelName, config.embeddingModelCacheDir);
+
+try {
+  await embedder.initialize();
+  const embedding = await embedder.embed('search query');
+  // Use embedding...
+} finally {
+  await embedder.dispose();
+}
+```
+
+**Design Decisions:**
+- Initialization lock prevents race conditions when multiple callers try to initialize
+- Disposed flag prevents use-after-dispose bugs
+- Explicit dispose() releases large model from memory
+- isReady() allows health checks without side effects
+
 ### Fuzzy Keyword Search (fuse.js)
 
 **Library:** `fuse.js` - Fuzzy string matching with typo tolerance
@@ -1254,14 +1413,26 @@ export class Config {
   get mcpServerPort() { return this.env.MCP_SERVER_PORT; }
 }
 
-// Singleton for convenience
-export const config = new Config();
+// Lazy initialization pattern - better for testing and hot reloading
+let _config: Config | undefined;
+
+export function getConfig(): Config {
+  if (!_config) {
+    _config = new Config(process.env);
+  }
+  return _config;
+}
+
+export function resetConfig(): void {
+  _config = undefined;
+}
 ```
 
 **Usage:**
 ```typescript
-import { config } from '@skippy/shared';
+import { getConfig } from '@skippy/shared';
 
+const config = getConfig();
 const dataDir = config.dataDir;       // ✅ Type-safe
 const level = config.logLevel;        // ✅ Validated enum
 ```
@@ -1573,85 +1744,141 @@ bun test packages/search    # Specific package
 
 ### Structured Logging
 
-**Logger class with context:**
+**Logger class with dependency injection (no singleton):**
 
 ```typescript
 // packages/shared/src/logger.ts
 
+export type LogLevel = 'debug' | 'info' | 'warn' | 'error';
+
+export interface LoggerOptions {
+  level: LogLevel;
+  context?: Record<string, unknown>;
+}
+
 export class Logger {
-  constructor(
-    private readonly context: Record<string, unknown> = {},
-    private readonly instance = consola
-  ) {}
+  private readonly level: LogLevel;
+  private readonly context: Record<string, unknown>;
+
+  constructor(options: LoggerOptions) {
+    this.level = options.level;
+    this.context = options.context ?? {};
+  }
 
   child(context: Record<string, unknown>): Logger {
-    return new Logger({ ...this.context, ...context }, this.instance);
+    return new Logger({
+      level: this.level,
+      context: { ...this.context, ...context }
+    });
   }
 
-  info(message: string, meta?: Record<string, unknown>) {
-    if (config.logLevel === LogLevel.INFO || config.logLevel === LogLevel.DEBUG) {
-      this.instance.info(message, { ...this.context, ...meta });
+  private shouldLog(level: LogLevel): boolean {
+    const levels: LogLevel[] = ['debug', 'info', 'warn', 'error'];
+    return levels.indexOf(level) >= levels.indexOf(this.level);
+  }
+
+  info(message: string, meta?: Record<string, unknown>): void {
+    if (this.shouldLog('info')) {
+      consola.info(message, { ...this.context, ...meta });
     }
   }
 
-  success(message: string, meta?: Record<string, unknown>) {
-    this.instance.success(message, { ...this.context, ...meta });
-  }
-
-  debug(message: string, meta?: Record<string, unknown>) {
-    if (config.logLevel === LogLevel.DEBUG) {
-      this.instance.debug(message, { ...this.context, ...meta });
+  success(message: string, meta?: Record<string, unknown>): void {
+    if (this.shouldLog('info')) {
+      consola.success(message, { ...this.context, ...meta });
     }
   }
 
-  error(message: string, meta?: Record<string, unknown>) {
-    this.instance.error(message, { ...this.context, ...meta });
+  debug(message: string, meta?: Record<string, unknown>): void {
+    if (this.shouldLog('debug')) {
+      consola.debug(message, { ...this.context, ...meta });
+    }
   }
 
-  warn(message: string, meta?: Record<string, unknown>) {
-    this.instance.warn(message, { ...this.context, ...meta });
+  error(message: string, meta?: Record<string, unknown>): void {
+    if (this.shouldLog('error')) {
+      consola.error(message, { ...this.context, ...meta });
+    }
+  }
+
+  warn(message: string, meta?: Record<string, unknown>): void {
+    if (this.shouldLog('warn')) {
+      consola.warn(message, { ...this.context, ...meta });
+    }
   }
 }
 
-export const logger = new Logger();
+// Factory function for creating loggers - prefer this over direct construction
+export function createLogger(config: Config): Logger {
+  return new Logger({ level: config.logLevel });
+}
 ```
+
+**Usage with dependency injection:**
+
+```typescript
+// Application entry point creates and passes logger
+const config = getConfig();
+const logger = createLogger(config);
+
+const searchEngine = new SearchEngine(loader, embedder, logger);
+const server = new McpServer(config, logger);
+```
+
+**Testing with controlled logger:**
+
+```typescript
+test('search engine logs queries', async () => {
+  const logger = new Logger({ level: 'debug' });
+  const engine = new SearchEngine(loader, embedder, logger);
+
+  await engine.search('healing');
+
+  // Logger can be inspected or use a mock/spy if needed
+});
+```
+
+**Design Decisions:**
+- No exported singleton - avoids global state and makes testing easier
+- Factory function `createLogger()` provides convenient construction
+- Logger level is passed in via options, not read from global config
+- Child loggers inherit level from parent
 
 ### MCP Tool Logging
 
-**Standard logging for all tool calls:**
+**Standard logging for all tool calls (using dependency injection):**
 
 ```typescript
 // apps/mcp-server/src/middleware/logging.ts
 
-export async function withLogging<T>(
-  toolName: string,
-  params: unknown,
-  handler: () => Promise<T>
-): Promise<T> {
-  const startTime = performance.now();
-  const toolLogger = logger.child({ tool: toolName });
+export function createLoggingMiddleware(logger: Logger) {
+  return async function withLogging<T>(
+    toolName: string,
+    params: unknown,
+    handler: () => Promise<T>
+  ): Promise<T> {
+    const startTime = performance.now();
+    const toolLogger = logger.child({ tool: toolName });
 
-  toolLogger.info('Tool called', { params });
+    toolLogger.info('Tool called', { params });
 
-  try {
-    const result = await handler();
-    const duration = Math.round(performance.now() - startTime);
+    try {
+      const result = await handler();
+      const duration = Math.round(performance.now() - startTime);
 
-    toolLogger.success('Tool completed', { duration });
-
-    if (config.logLevel === LogLevel.DEBUG) {
+      toolLogger.success('Tool completed', { duration });
       toolLogger.debug('Tool result', { result });
-    }
 
-    return result;
-  } catch (error) {
-    const duration = Math.round(performance.now() - startTime);
-    toolLogger.error('Tool failed', {
-      error: (error as Error).message,
-      duration
-    });
-    throw error;
-  }
+      return result;
+    } catch (error) {
+      const duration = Math.round(performance.now() - startTime);
+      toolLogger.error('Tool failed', {
+        error: (error as Error).message,
+        duration
+      });
+      throw error;
+    }
+  };
 }
 ```
 
@@ -1712,6 +1939,269 @@ try {
   throw err;  // Re-throw for MCP to handle
 }
 ```
+
+---
+
+## Production Hardening
+
+### Graceful Shutdown
+
+**Signal handlers for clean termination:**
+
+```typescript
+// apps/mcp-server/src/shutdown.ts
+
+export function setupGracefulShutdown(
+  server: McpServer,
+  logger: Logger
+): void {
+  const shutdown = async (signal: string): Promise<void> => {
+    logger.info(`Received ${signal}, shutting down gracefully...`);
+
+    try {
+      // Stop accepting new requests
+      await server.close();
+
+      // Allow in-flight requests to complete (5s timeout)
+      await Promise.race([
+        server.waitForPendingRequests(),
+        new Promise(resolve => setTimeout(resolve, 5000))
+      ]);
+
+      logger.info('Shutdown complete');
+      process.exit(0);
+    } catch (error) {
+      logger.error('Error during shutdown', { error: (error as Error).message });
+      process.exit(1);
+    }
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+}
+```
+
+**Usage in server entry point:**
+
+```typescript
+// apps/mcp-server/src/index.ts
+
+const server = new McpServer(config);
+setupGracefulShutdown(server, logger);
+
+await server.start();
+```
+
+### Circuit Breakers
+
+**For embedder initialization (can fail due to model download issues):**
+
+```typescript
+// packages/search/src/circuit-breaker.ts
+
+export enum CircuitState {
+  CLOSED = 'closed',     // Normal operation
+  OPEN = 'open',         // Failing, reject requests
+  HALF_OPEN = 'half_open' // Testing if recovered
+}
+
+export interface CircuitBreakerOptions {
+  failureThreshold: number;  // Failures before opening
+  resetTimeout: number;      // ms before trying again
+}
+
+export class CircuitBreaker {
+  private state: CircuitState = CircuitState.CLOSED;
+  private failures: number = 0;
+  private lastFailure: number = 0;
+
+  constructor(private options: CircuitBreakerOptions) {}
+
+  async execute<T>(operation: () => Promise<T>): Promise<T> {
+    if (this.state === CircuitState.OPEN) {
+      if (Date.now() - this.lastFailure > this.options.resetTimeout) {
+        this.state = CircuitState.HALF_OPEN;
+      } else {
+        throw new Error('Circuit breaker is open');
+      }
+    }
+
+    try {
+      const result = await operation();
+      this.onSuccess();
+      return result;
+    } catch (error) {
+      this.onFailure();
+      throw error;
+    }
+  }
+
+  private onSuccess(): void {
+    this.failures = 0;
+    this.state = CircuitState.CLOSED;
+  }
+
+  private onFailure(): void {
+    this.failures++;
+    this.lastFailure = Date.now();
+
+    if (this.failures >= this.options.failureThreshold) {
+      this.state = CircuitState.OPEN;
+    }
+  }
+
+  getState(): CircuitState {
+    return this.state;
+  }
+}
+```
+
+**Usage with embedder:**
+
+```typescript
+const embedderBreaker = new CircuitBreaker({
+  failureThreshold: 3,
+  resetTimeout: 30000  // 30 seconds
+});
+
+async function getEmbedding(text: string): Promise<number[]> {
+  return embedderBreaker.execute(() => embedder.embed(text));
+}
+```
+
+### Health Checks
+
+**Health endpoint for monitoring:**
+
+```typescript
+// apps/mcp-server/src/health.ts
+
+export interface HealthStatus {
+  status: 'healthy' | 'degraded' | 'unhealthy';
+  checks: {
+    embedder: ComponentHealth;
+    dataLoader: ComponentHealth;
+    searchIndex: ComponentHealth;
+  };
+  uptime: number;
+  version: string;
+}
+
+export interface ComponentHealth {
+  status: 'up' | 'down';
+  latency?: number;
+  error?: string;
+}
+
+export async function checkHealth(
+  embedder: Embedder,
+  dataLoader: DataLoader,
+  searchIndex: SearchIndex
+): Promise<HealthStatus> {
+  const checks = await Promise.all([
+    checkEmbedder(embedder),
+    checkDataLoader(dataLoader),
+    checkSearchIndex(searchIndex)
+  ]);
+
+  const [embedderHealth, dataLoaderHealth, searchIndexHealth] = checks;
+
+  const allUp = checks.every(c => c.status === 'up');
+  const anyDown = checks.some(c => c.status === 'down');
+
+  return {
+    status: allUp ? 'healthy' : anyDown ? 'unhealthy' : 'degraded',
+    checks: {
+      embedder: embedderHealth,
+      dataLoader: dataLoaderHealth,
+      searchIndex: searchIndexHealth
+    },
+    uptime: process.uptime(),
+    version: process.env.npm_package_version ?? 'unknown'
+  };
+}
+
+async function checkEmbedder(embedder: Embedder): Promise<ComponentHealth> {
+  const start = performance.now();
+  try {
+    await embedder.embed('health check');
+    return { status: 'up', latency: Math.round(performance.now() - start) };
+  } catch (error) {
+    return { status: 'down', error: (error as Error).message };
+  }
+}
+```
+
+### Atomic File Operations
+
+**Safe file writes to prevent corruption:**
+
+```typescript
+// packages/shared/src/atomic-file.ts
+
+import { writeFile, rename, unlink } from 'fs/promises';
+import { randomUUID } from 'crypto';
+import { dirname, join } from 'path';
+
+export async function writeFileAtomic(
+  filePath: string,
+  data: string | Buffer
+): Promise<void> {
+  const dir = dirname(filePath);
+  const tempPath = join(dir, `.${randomUUID()}.tmp`);
+
+  try {
+    // Write to temp file first
+    await writeFile(tempPath, data);
+
+    // Atomic rename (same filesystem)
+    await rename(tempPath, filePath);
+  } catch (error) {
+    // Clean up temp file on failure
+    try {
+      await unlink(tempPath);
+    } catch {
+      // Ignore cleanup errors
+    }
+    throw error;
+  }
+}
+
+export async function writeJsonAtomic<T>(
+  filePath: string,
+  data: T,
+  indent: number = 2
+): Promise<void> {
+  const json = JSON.stringify(data, null, indent);
+  await writeFileAtomic(filePath, json);
+}
+```
+
+**Binary file writes:**
+
+```typescript
+export async function writeBinaryAtomic(
+  filePath: string,
+  data: ArrayBuffer | Buffer
+): Promise<void> {
+  const buffer = Buffer.isBuffer(data) ? data : Buffer.from(data);
+  await writeFileAtomic(filePath, buffer);
+}
+```
+
+**Usage:**
+
+```typescript
+// Instead of direct writeFile
+await writeJsonAtomic('data/items/data.json', items);
+await writeBinaryAtomic('data/items/embeddings.bin', embeddings.buffer);
+```
+
+**Design Decisions:**
+- Write to temp file, then atomic rename - prevents partial writes
+- Temp files use UUID to avoid collisions with concurrent writes
+- Cleanup temp files on failure to prevent orphaned files
+- Same-filesystem rename is atomic on POSIX and Windows
 
 ---
 

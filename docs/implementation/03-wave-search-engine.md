@@ -168,6 +168,8 @@ bun test similarity
 Create `packages/search/src/similarity.ts`:
 
 ```typescript
+const EPSILON = 1e-10;
+
 /** Computes dot product of two vectors. */
 export function dotProduct(a: number[], b: number[]): number {
   let sum = 0;
@@ -188,14 +190,23 @@ export function magnitude(vec: number[]): number {
 
 /** Computes cosine similarity between two vectors (-1 to 1). */
 export function cosineSimilarity(a: number[], b: number[]): number {
+  // Validate vector lengths match
+  if (a.length !== b.length) {
+    throw new Error(`Vector dimension mismatch: ${a.length} vs ${b.length}`);
+  }
+
   const magA = magnitude(a);
   const magB = magnitude(b);
 
-  if (magA === 0 || magB === 0) {
+  // Guard against near-zero magnitudes
+  if (magA < EPSILON || magB < EPSILON) {
     return 0;
   }
 
-  return dotProduct(a, b) / (magA * magB);
+  const result = dotProduct(a, b) / (magA * magB);
+
+  // Guard against NaN from floating point errors
+  return Number.isNaN(result) ? 0 : result;
 }
 
 /** Normalizes a vector to unit length. */
@@ -407,6 +418,11 @@ export function createSearchableText(endpoint: Endpoint, entity: Record<string, 
       if (entity.description) parts.push(String(entity.description));
       break;
     }
+    default: {
+      // Exhaustive check - if new endpoint added, this will fail compilation
+      const _exhaustive: never = endpoint;
+      throw new Error(`Unknown endpoint: ${endpoint}`);
+    }
   }
 
   return parts.join(' ');
@@ -416,6 +432,7 @@ export function createSearchableText(endpoint: Endpoint, entity: Record<string, 
 export class Embedder {
   private readonly config: EmbedderConfig;
   private pipeline: Pipeline | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(config: EmbedderConfig) {
     this.config = config;
@@ -423,11 +440,46 @@ export class Embedder {
 
   /** Initializes the embedding model (downloads if needed). */
   async initialize(): Promise<void> {
-    if (this.pipeline) return;
+    // Use promise-based lock to prevent concurrent initialization
+    if (this.initPromise) {
+      return this.initPromise;
+    }
 
-    this.pipeline = await pipeline('feature-extraction', this.config.modelName, {
-      cache_dir: this.config.cacheDir,
-    });
+    if (this.pipeline) {
+      return;
+    }
+
+    this.initPromise = this.doInitialize();
+    try {
+      await this.initPromise;
+    } catch (error) {
+      this.initPromise = null; // Allow retry on failure
+      throw error;
+    }
+  }
+
+  private async doInitialize(): Promise<void> {
+    const timeoutMs = 120000; // 2 minutes for model download
+
+    const initWithTimeout = Promise.race([
+      pipeline('feature-extraction', this.config.modelName, {
+        cache_dir: this.config.cacheDir,
+      }),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('Model initialization timeout')), timeoutMs)
+      ),
+    ]);
+
+    this.pipeline = await initWithTimeout;
+  }
+
+  /** Cleans up the embedder resources. */
+  async dispose(): Promise<void> {
+    if (this.pipeline) {
+      // @xenova/transformers pipeline cleanup if available
+      this.pipeline = null;
+    }
+    this.initPromise = null;
   }
 
   /** Generates embedding vector for text. */
@@ -823,6 +875,11 @@ export function mergeResults(
     }
   }
 
+  // Clamp scores to 0-1 range after boosting
+  for (const result of merged.values()) {
+    result.score = Math.min(1.0, Math.max(0, result.score));
+  }
+
   // Sort by score descending
   const sorted = Array.from(merged.values()).sort((a, b) => b.score - a.score);
 
@@ -1018,49 +1075,75 @@ bun test index-manager
 Create `packages/search/src/index-manager.ts`:
 
 ```typescript
-/** Saves embeddings to binary file. */
+import { atomicWrite } from '@skippy/shared';
+
+const EMBEDDING_MAGIC = 0x454D4244; // "EMBD"
+const EMBEDDING_VERSION = 1;
+
+/** Saves embeddings to binary file with header. */
 export async function saveEmbeddings(
   embeddings: number[][],
-  path: string
-): Promise<void> {
-  if (embeddings.length === 0) {
-    await Bun.write(path, new Float32Array(0));
-    return;
-  }
-
-  const dimension = embeddings[0].length;
-  const flat = new Float32Array(embeddings.length * dimension);
-
-  for (let i = 0; i < embeddings.length; i++) {
-    flat.set(embeddings[i], i * dimension);
-  }
-
-  await Bun.write(path, flat);
-}
-
-/** Loads embeddings from binary file. */
-export async function loadEmbeddings(
   path: string,
   dimension: number
-): Promise<number[][]> {
+): Promise<void> {
+  const count = embeddings.length;
+  const headerSize = 12; // 4 + 2 + 2 + 4 bytes
+  const dataSize = count * dimension * 4;
+  const buffer = new ArrayBuffer(headerSize + dataSize);
+  const view = new DataView(buffer);
+
+  // Write header
+  view.setUint32(0, EMBEDDING_MAGIC, true);
+  view.setUint16(4, EMBEDDING_VERSION, true);
+  view.setUint16(6, dimension, true);
+  view.setUint32(8, count, true);
+
+  // Write data
+  const floatView = new Float32Array(buffer, headerSize);
+  for (let i = 0; i < embeddings.length; i++) {
+    floatView.set(embeddings[i], i * dimension);
+  }
+
+  await atomicWrite(path, new Uint8Array(buffer));
+}
+
+/** Loads embeddings from binary file with header validation. */
+export async function loadEmbeddings(path: string): Promise<{ embeddings: number[][], dimension: number }> {
   const file = Bun.file(path);
+  if (!await file.exists()) {
+    throw new Error(`Embeddings file not found: ${path}`);
+  }
+
   const buffer = await file.arrayBuffer();
+  const view = new DataView(buffer);
 
-  if (buffer.byteLength === 0) {
-    return [];
+  // Validate header
+  const magic = view.getUint32(0, true);
+  if (magic !== EMBEDDING_MAGIC) {
+    throw new Error('Invalid embeddings file format');
   }
 
-  const flat = new Float32Array(buffer);
-  const count = flat.length / dimension;
+  const version = view.getUint16(4, true);
+  if (version !== EMBEDDING_VERSION) {
+    throw new Error(`Unsupported embeddings version: ${version}`);
+  }
+
+  const dimension = view.getUint16(6, true);
+  const count = view.getUint32(8, true);
+
+  // Validate file size
+  const expectedSize = 12 + count * dimension * 4;
+  if (buffer.byteLength !== expectedSize) {
+    throw new Error('Embeddings file corrupted: size mismatch');
+  }
+
+  const floatView = new Float32Array(buffer, 12);
   const embeddings: number[][] = [];
-
   for (let i = 0; i < count; i++) {
-    const start = i * dimension;
-    const embedding = Array.from(flat.slice(start, start + dimension));
-    embeddings.push(embedding);
+    embeddings.push(Array.from(floatView.slice(i * dimension, (i + 1) * dimension)));
   }
 
-  return embeddings;
+  return { embeddings, dimension };
 }
 
 /** Saves ID index to JSON file. */
