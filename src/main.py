@@ -22,7 +22,7 @@ def find_project_root():
     return current.parent
 
 
-CACHE_DIR = find_project_root() / "data"
+DATA_DIR = find_project_root() / "data"
 
 
 def download_endpoint(endpoint_name, limit=50):
@@ -65,28 +65,28 @@ def download_endpoint(endpoint_name, limit=50):
         return data.get("data", data)
 
 
-def save_cache(endpoint_name, data):
-    """Save data to local cache file."""
-    CACHE_DIR.mkdir(exist_ok=True)
-    cache_file = CACHE_DIR / f"{endpoint_name}.json"
+def save_data(endpoint_name, data):
+    """Save data to local data file."""
+    DATA_DIR.mkdir(exist_ok=True)
+    data_file = DATA_DIR / f"{endpoint_name}.json"
 
-    with cache_file.open("w", encoding="utf-8") as f:
+    with data_file.open("w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
 
-    print(f"Cache saved to {cache_file}")
+    print(f"Data saved to {data_file}")
 
 
 def main():
-    """Download all Arc Raiders API endpoints and save to local cache."""
+    """Download all Arc Raiders API endpoints and save to local data."""
     try:
         endpoints = ["items", "arcs", "quests", "traders", "events-schedule"]
 
         for endpoint in endpoints:
             data = download_endpoint(endpoint)
-            save_cache(endpoint, data)
-            print(f"✓ {endpoint} cached successfully\n")
+            save_data(endpoint, data)
+            print(f"✓ {endpoint} saved successfully\n")
 
-        print("✓ All caches updated successfully")
+        print("✓ All data updated successfully")
     except httpx.HTTPError as e:
         print(f"✗ HTTP error: {e}")
         raise SystemExit(1) from e
