@@ -1,4 +1,5 @@
-import { pipeline, type Pipeline } from '@xenova/transformers';
+import { pipeline } from '@xenova/transformers';
+import type { FeatureExtractionPipeline } from '@xenova/transformers';
 import { Endpoint } from '@skippy/shared';
 
 export interface EmbedderConfig {
@@ -54,7 +55,7 @@ export function createSearchableText(endpoint: Endpoint, entity: Record<string, 
 /** Generates embeddings using a local transformer model. */
 export class Embedder {
   private readonly config: EmbedderConfig;
-  private pipeline: Pipeline | null = null;
+  private pipeline: FeatureExtractionPipeline | null = null;
   private initPromise: Promise<void> | null = null;
 
   constructor(config: EmbedderConfig) {

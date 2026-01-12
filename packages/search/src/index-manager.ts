@@ -24,7 +24,10 @@ export async function saveEmbeddings(
   // Write data
   const floatView = new Float32Array(buffer, headerSize);
   for (let i = 0; i < embeddings.length; i++) {
-    floatView.set(embeddings[i], i * dimension);
+    const embedding = embeddings[i];
+    if (embedding) {
+      floatView.set(embedding, i * dimension);
+    }
   }
 
   await atomicWrite(path, new Uint8Array(buffer));

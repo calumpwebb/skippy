@@ -104,9 +104,13 @@ export class HybridSearcher<T extends Record<string, unknown>> {
     const scored: ScoredId[] = [];
 
     for (let i = 0; i < this.items.length; i++) {
-      const score = cosineSimilarity(queryEmbedding, this.embeddings[i]);
+      const embedding = this.embeddings[i];
+      const item = this.items[i];
+      if (!embedding || !item) continue;
+
+      const score = cosineSimilarity(queryEmbedding, embedding);
       scored.push({
-        id: String(this.items[i][this.idField]),
+        id: String(item[this.idField]),
         score,
       });
     }

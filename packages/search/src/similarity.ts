@@ -4,7 +4,11 @@ const EPSILON = 1e-10;
 export function dotProduct(a: number[], b: number[]): number {
   let sum = 0;
   for (let i = 0; i < a.length; i++) {
-    sum += a[i] * b[i];
+    const ai = a[i];
+    const bi = b[i];
+    if (ai !== undefined && bi !== undefined) {
+      sum += ai * bi;
+    }
   }
   return sum;
 }

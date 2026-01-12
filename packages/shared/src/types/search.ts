@@ -1,12 +1,12 @@
-/** Parameters common to all search tools. */
-export interface BaseSearchParams {
+/** Parameters common to all search tools (legacy interface version). */
+export interface SearchParams {
   query: string;
   fields?: string[];
   limit?: number;
 }
 
-/** Result structure returned by all search tools. */
-export interface BaseSearchResult<T> {
+/** Result structure returned by all search tools (legacy interface version). */
+export interface SearchResult<T> {
   results: T[];
   totalMatches: number;
   query: string;
