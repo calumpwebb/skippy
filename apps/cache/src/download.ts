@@ -1,6 +1,6 @@
 import { Endpoint } from '@skippy/shared';
 
-export const METAFORGE_BASE_URL = 'https://metaforge.gg/api/arc-raiders';
+export const METAFORGE_BASE_URL = 'https://metaforge.app/api/arc-raiders';
 
 const FETCH_TIMEOUT_MS = 30000;
 const MAX_RETRIES = 3;
@@ -21,9 +21,18 @@ function validateResponse(response: Response): void {
   }
 }
 
-/** Downloads data from a MetaForge API endpoint. */
-export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
-  const url = `${METAFORGE_BASE_URL}/${endpoint}`;
+interface PaginatedResponse {
+  data: unknown[];
+  pagination?: {
+    hasNextPage: boolean;
+    page: number;
+    totalPages: number;
+  };
+}
+
+/** Downloads a single page from a MetaForge API endpoint. */
+async function downloadPage(endpoint: Endpoint, page: number = 1): Promise<PaginatedResponse> {
+  const url = `${METAFORGE_BASE_URL}/${endpoint}?page=${page}`;
 
   for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
     const controller = new AbortController();
@@ -41,7 +50,7 @@ export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
       clearTimeout(timeoutId);
       validateResponse(response);
 
-      return response.json();
+      return response.json() as Promise<PaginatedResponse>;
     } catch (error) {
       clearTimeout(timeoutId);
 
@@ -54,8 +63,39 @@ export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
     }
   }
 
-  // TypeScript needs this for completeness, but it should never be reached
   throw new Error('Max retries exceeded');
+}
+
+/** Downloads all pages from a MetaForge API endpoint. */
+export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
+  // First page to check structure
+  const firstResponse = await downloadPage(endpoint, 1);
+
+  // If no pagination or data isn't an array (e.g., traders), return as-is
+  if (!firstResponse.pagination || !Array.isArray(firstResponse.data)) {
+    return firstResponse;
+  }
+
+  // Paginated endpoint - collect all pages
+  const allData: unknown[] = [...firstResponse.data];
+  let page = 2;
+  let hasMore = firstResponse.pagination.hasNextPage;
+
+  while (hasMore) {
+    const response = await downloadPage(endpoint, page);
+
+    if (Array.isArray(response.data)) {
+      allData.push(...response.data);
+    }
+
+    hasMore = response.pagination?.hasNextPage ?? false;
+    page++;
+
+    // Safety limit
+    if (page > 100) break;
+  }
+
+  return { data: allData };
 }
 
 function shouldRetry(error: unknown): boolean {
@@ -75,24 +115,23 @@ export function normalizeResponse(endpoint: Endpoint, response: unknown): unknow
     return [];
   }
 
-  const data = response as Record<string, unknown>;
+  const wrapper = response as Record<string, unknown>;
 
-  switch (endpoint) {
-    case Endpoint.ITEMS:
-      return Array.isArray(data.items) ? data.items : [];
-    case Endpoint.ARCS:
-      return Array.isArray(data.arcs) ? data.arcs : [];
-    case Endpoint.QUESTS:
-      return Array.isArray(data.quests) ? data.quests : [];
-    case Endpoint.TRADERS:
-      return Array.isArray(data.traders) ? data.traders : [];
-    case Endpoint.EVENTS: {
-      const schedule = data.events_schedule as Record<string, unknown> | undefined;
-      return Array.isArray(schedule?.events) ? schedule.events : [];
-    }
-    default:
-      return [];
+  // Most endpoints return { data: [...] } format
+  if (Array.isArray(wrapper.data)) {
+    return wrapper.data;
   }
+
+  // Traders endpoint returns { data: { "TraderName": [...items] } }
+  if (endpoint === Endpoint.TRADERS && typeof wrapper.data === 'object' && wrapper.data !== null) {
+    const tradersObj = wrapper.data as Record<string, unknown[]>;
+    return Object.entries(tradersObj).map(([name, items]) => ({
+      name,
+      items: Array.isArray(items) ? items : [],
+    }));
+  }
+
+  return [];
 }
 
 /** Downloads and normalizes data from an endpoint. */

@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { Endpoint, Config, Logger, atomicWrite } from '@skippy/shared';
+import { Embedder, createSearchableText, saveEmbeddings } from '@skippy/search';
 import { downloadAndNormalize } from './download';
 import { generateSchema } from './generate-schema';
 import { generateTypeScript } from './generate-types';
@@ -38,6 +39,15 @@ export async function runCache(
 
   logger.info('Starting cache update', { dataDir, endpoints: endpoints.length });
 
+  // Initialize embedder once for all endpoints
+  const embedder = new Embedder({
+    modelName: config.embeddingModelName,
+    cacheDir: config.embeddingModelCacheDir,
+  });
+  logger.info('Initializing embedding model...');
+  await embedder.initialize();
+  logger.success('Embedding model ready');
+
   const results: CacheResult[] = [];
 
   for (const endpoint of endpoints) {
@@ -62,7 +72,20 @@ export async function runCache(
       await atomicWrite(schemaPath, JSON.stringify(schema, null, 2));
       endpointLogger.success(`Generated schema with ${schema.fields.length} fields`);
 
-      // 4. Generate types (if enabled)
+      // 4. Generate embeddings for search
+      if (data.length > 0) {
+        endpointLogger.info('Generating embeddings...');
+        const texts = data.map(item =>
+          createSearchableText(endpoint, item as Record<string, unknown>)
+        );
+        const embeddings = await embedder.embedBatch(texts);
+        const embeddingsPath = join(endpointDir, 'embeddings.bin');
+        const dimension = embeddings[0]?.length ?? 384;
+        await saveEmbeddings(embeddings, embeddingsPath, dimension);
+        endpointLogger.success(`Generated ${embeddings.length} embeddings`);
+      }
+
+      // 5. Generate types (if enabled)
       if (opts.generateTypes && data.length > 0) {
         const typeName = endpointToTypeName(endpoint);
         const types = generateTypeScript(typeName, data);
@@ -74,7 +97,7 @@ export async function runCache(
         endpointLogger.success(`Generated types: ${typeName}`);
       }
 
-      // 5. Generate test fixtures (if enabled)
+      // 6. Generate test fixtures (if enabled)
       if (opts.generateFixtures) {
         const fixturesDir = join('test/fixtures');
         await mkdir(fixturesDir, { recursive: true });

@@ -1,0 +1,14 @@
+{
+  "fields": [
+    "items",
+    "items.description",
+    "items.icon",
+    "items.id",
+    "items.item_type",
+    "items.name",
+    "items.rarity",
+    "items.trader_price",
+    "items.value",
+    "name"
+  ]
+}

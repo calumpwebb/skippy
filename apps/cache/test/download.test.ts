@@ -14,25 +14,28 @@ describe('downloadEndpoint', () => {
   test('constructs correct URL for items endpoint', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ items: [] }),
+      json: async () => ({ data: [] }),
       headers: { get: () => null },
     });
 
     await downloadEndpoint(Endpoint.ITEMS);
 
-    expect(mockFetch).toHaveBeenCalledWith(`${METAFORGE_BASE_URL}/items`, expect.any(Object));
+    expect(mockFetch).toHaveBeenCalledWith(
+      `${METAFORGE_BASE_URL}/items?page=1`,
+      expect.any(Object)
+    );
   });
 
   test('constructs correct URL for arcs endpoint', async () => {
     mockFetch.mockResolvedValueOnce({
       ok: true,
-      json: async () => ({ arcs: [] }),
+      json: async () => ({ data: [] }),
       headers: { get: () => null },
     });
 
     await downloadEndpoint(Endpoint.ARCS);
 
-    expect(mockFetch).toHaveBeenCalledWith(`${METAFORGE_BASE_URL}/arcs`, expect.any(Object));
+    expect(mockFetch).toHaveBeenCalledWith(`${METAFORGE_BASE_URL}/arcs?page=1`, expect.any(Object));
   });
 
   test('throws on non-ok response', async () => {
@@ -135,7 +138,7 @@ describe('downloadEndpoint', () => {
 
 describe('normalizeResponse', () => {
   test('extracts items array from response', () => {
-    const response = { items: [{ id: '1' }, { id: '2' }] };
+    const response = { data: [{ id: '1' }, { id: '2' }] };
 
     const normalized = normalizeResponse(Endpoint.ITEMS, response);
 
@@ -143,7 +146,7 @@ describe('normalizeResponse', () => {
   });
 
   test('extracts arcs array from response', () => {
-    const response = { arcs: [{ id: 'arc-1' }] };
+    const response = { data: [{ id: 'arc-1' }] };
 
     const normalized = normalizeResponse(Endpoint.ARCS, response);
 
@@ -151,30 +154,33 @@ describe('normalizeResponse', () => {
   });
 
   test('extracts quests array from response', () => {
-    const response = { quests: [{ id: 'quest-1' }] };
+    const response = { data: [{ id: 'quest-1' }] };
 
     const normalized = normalizeResponse(Endpoint.QUESTS, response);
 
     expect(normalized).toEqual([{ id: 'quest-1' }]);
   });
 
-  test('extracts traders array from response', () => {
-    const response = { traders: [{ id: 'trader-1' }] };
+  test('extracts traders from nested object response', () => {
+    const response = { data: { Apollo: [{ id: 'item-1' }], Celeste: [{ id: 'item-2' }] } };
 
     const normalized = normalizeResponse(Endpoint.TRADERS, response);
 
-    expect(normalized).toEqual([{ id: 'trader-1' }]);
+    expect(normalized).toEqual([
+      { name: 'Apollo', items: [{ id: 'item-1' }] },
+      { name: 'Celeste', items: [{ id: 'item-2' }] },
+    ]);
   });
 
-  test('extracts events from schedule response', () => {
-    const response = { events_schedule: { events: [{ id: 'event-1' }] } };
+  test('extracts events from response', () => {
+    const response = { data: [{ id: 'event-1' }] };
 
     const normalized = normalizeResponse(Endpoint.EVENTS, response);
 
     expect(normalized).toEqual([{ id: 'event-1' }]);
   });
 
-  test('returns empty array if key not found', () => {
+  test('returns empty array if data key not found', () => {
     const response = { unexpected: 'data' };
 
     const normalized = normalizeResponse(Endpoint.ITEMS, response);
