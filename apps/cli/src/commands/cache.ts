@@ -26,19 +26,7 @@ export function createCacheCommand(): Command {
         return;
       }
 
-      console.log(
-        pc.cyan(
-          '\u2554\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2557'
-        )
-      );
-      console.log(
-        pc.cyan('\u2551') + '       Skippy Cache Updater            ' + pc.cyan('\u2551')
-      );
-      console.log(
-        pc.cyan(
-          '\u255a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u255d'
-        )
-      );
+      console.log(pc.cyan('skippy cache') + ' - updating game data...');
       console.log();
 
       if (options.dryRun) {
