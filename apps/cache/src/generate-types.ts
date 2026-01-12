@@ -5,7 +5,13 @@ export function inferType(value: unknown): string {
 
   if (Array.isArray(value)) {
     if (value.length === 0) return 'unknown[]';
-    const elementType = inferType(value[0]);
+    const firstElement = value[0];
+    // For arrays of objects, return 'object[]' as a placeholder
+    // The caller will handle generating proper interfaces
+    if (typeof firstElement === 'object' && firstElement !== null) {
+      return 'object[]';
+    }
+    const elementType = inferType(firstElement);
     return `${elementType}[]`;
   }
 
@@ -14,33 +20,79 @@ export function inferType(value: unknown): string {
   return type;
 }
 
+/** Finds the first non-empty array value for a field across all items. */
+function findNonEmptyArray(items: unknown[], key: string): unknown[] | null {
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) continue;
+    const record = item as Record<string, unknown>;
+    const value = record[key];
+    if (Array.isArray(value) && value.length > 0) {
+      return value;
+    }
+  }
+  return null;
+}
+
 interface FieldInfo {
   name: string;
   type: string;
   optional: boolean;
   nestedFields?: Map<string, FieldInfo>;
+  arrayElementFields?: Map<string, FieldInfo>;
 }
 
-/** Creates FieldInfo for a single key-value pair. */
-function createFieldInfo(key: string, value: unknown): FieldInfo {
+/** Creates FieldInfo for a single key-value pair, looking across all items for arrays. */
+function createFieldInfo(key: string, value: unknown, allItems: unknown[]): FieldInfo {
   const info: FieldInfo = {
     name: key,
     type: inferType(value),
     optional: false,
   };
 
+  // Handle nested objects
   const isNestedObject = value !== null && typeof value === 'object' && !Array.isArray(value);
   if (isNestedObject) {
-    info.nestedFields = analyzeFields([value]);
+    info.nestedFields = analyzeFields([value], allItems);
+  }
+
+  // Handle arrays - look across all items to find non-empty example
+  if (Array.isArray(value)) {
+    const nonEmptyArray = value.length > 0 ? value : findNonEmptyArray(allItems, key);
+    if (nonEmptyArray && nonEmptyArray.length > 0) {
+      const firstElement = nonEmptyArray[0];
+      if (typeof firstElement === 'object' && firstElement !== null) {
+        // Analyze all array elements across all items for better type inference
+        const allArrayElements = collectArrayElements(allItems, key);
+        info.arrayElementFields = analyzeFields(allArrayElements, allItems);
+        info.type = 'object[]'; // Will be replaced with interface name later
+      } else {
+        info.type = `${inferType(firstElement)}[]`;
+      }
+    }
   }
 
   return info;
 }
 
+/** Collects all array elements for a given key across all items. */
+function collectArrayElements(items: unknown[], key: string): unknown[] {
+  const elements: unknown[] = [];
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) continue;
+    const record = item as Record<string, unknown>;
+    const value = record[key];
+    if (Array.isArray(value)) {
+      elements.push(...value);
+    }
+  }
+  return elements;
+}
+
 /** Analyzes items to determine field types and optionality. */
-function analyzeFields(items: unknown[]): Map<string, FieldInfo> {
+function analyzeFields(items: unknown[], allItems?: unknown[]): Map<string, FieldInfo> {
   const fields = new Map<string, FieldInfo>();
   const itemCount = items.length;
+  const contextItems = allItems ?? items;
 
   for (const item of items) {
     if (typeof item !== 'object' || item === null) continue;
@@ -48,7 +100,7 @@ function analyzeFields(items: unknown[]): Map<string, FieldInfo> {
     const record = item as Record<string, unknown>;
     for (const [key, value] of Object.entries(record)) {
       if (!fields.has(key)) {
-        fields.set(key, createFieldInfo(key, value));
+        fields.set(key, createFieldInfo(key, value, contextItems));
       }
     }
   }
@@ -71,19 +123,38 @@ export function generateTypeScript(name: string, items: unknown[]): string {
   const fields = analyzeFields(items);
   const nestedInterfaces: string[] = [];
 
-  // Generate nested interfaces first
-  for (const [key, info] of fields) {
-    if (info.nestedFields && info.nestedFields.size > 0) {
-      const nestedName = `${name}${capitalize(key)}`;
-      info.type = nestedName;
+  // Generate nested interfaces (including array element interfaces)
+  function processFields(fieldMap: Map<string, FieldInfo>, parentName: string): void {
+    for (const [key, info] of fieldMap) {
+      // Handle nested objects
+      if (info.nestedFields && info.nestedFields.size > 0) {
+        const nestedName = `${parentName}${capitalize(key)}`;
+        info.type = nestedName;
+        processFields(info.nestedFields, nestedName);
 
-      const nestedFields = Array.from(info.nestedFields.entries())
-        .map(([k, v]) => `  ${k}${v.optional ? '?' : ''}: ${v.type};`)
-        .join('\n');
+        const nestedFields = Array.from(info.nestedFields.entries())
+          .map(([k, v]) => `  ${k}${v.optional ? '?' : ''}: ${v.type};`)
+          .join('\n');
 
-      nestedInterfaces.push(`export interface ${nestedName} {\n${nestedFields}\n}`);
+        nestedInterfaces.push(`export interface ${nestedName} {\n${nestedFields}\n}`);
+      }
+
+      // Handle array elements that are objects
+      if (info.arrayElementFields && info.arrayElementFields.size > 0) {
+        const elementName = `${parentName}${capitalize(key).replace(/s$/, '')}`;
+        info.type = `${elementName}[]`;
+        processFields(info.arrayElementFields, elementName);
+
+        const elementFields = Array.from(info.arrayElementFields.entries())
+          .map(([k, v]) => `  ${k}${v.optional ? '?' : ''}: ${v.type};`)
+          .join('\n');
+
+        nestedInterfaces.push(`export interface ${elementName} {\n${elementFields}\n}`);
+      }
     }
   }
+
+  processFields(fields, name);
 
   // Generate main interface
   const mainFields = Array.from(fields.entries())

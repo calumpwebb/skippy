@@ -54,12 +54,22 @@ export interface ItemStatBlock {
   reducedDispersionRecoveryTime: number;
 }
 
+export interface ItemLocation {
+  id: string;
+  map: string;
+}
+
+export interface ItemGuideLink {
+  url: string;
+  label: string;
+}
+
 export interface Item {
   id: string;
   name: string;
   description: string;
   item_type: string;
-  loadout_slots: unknown[];
+  loadout_slots: string[];
   icon: string;
   rarity: string;
   value: number;
@@ -73,7 +83,7 @@ export interface Item {
   loot_area: string;
   sources: null;
   ammo_type: string;
-  locations: unknown[];
-  guide_links: unknown[];
+  locations: ItemLocation[];
+  guide_links: ItemGuideLink[];
   game_asset_id: number;
 }
