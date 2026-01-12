@@ -4,22 +4,35 @@ from pathlib import Path
 import httpx
 
 API_URL = "https://metaforge.app/api/arc-raiders/items"
-CACHE_DIR = Path("cache")
-CACHE_FILE = CACHE_DIR / "arc-raiders-items.json"
+CACHE_DIR = Path("../data")
+CACHE_FILE = CACHE_DIR / "items.json"
 
 
 def download_items():
-    """Download items from the Arc Raiders API."""
-    print(f"Fetching data from {API_URL}...")
+    """Download all items from the Arc Raiders API with pagination."""
+    all_items = []
+    page = 1
 
-    response = httpx.get(API_URL, timeout=30.0, follow_redirects=True)
-    response.raise_for_status()
+    while True:
+        print(f"Fetching page {page} from {API_URL}...")
 
-    data = response.json()
-    items = data.get("data", [])
+        response = httpx.get(API_URL, params={"page": page}, timeout=30.0, follow_redirects=True)
+        response.raise_for_status()
 
-    print(f"Downloaded {len(items)} items")
-    return items
+        data = response.json()
+        items = data.get("data", [])
+        pagination = data.get("pagination", {})
+
+        all_items.extend(items)
+        print(f"  Downloaded {len(items)} items (total: {len(all_items)})")
+
+        if not pagination.get("hasNextPage", False):
+            break
+
+        page += 1
+
+    print(f"Downloaded {len(all_items)} items across {page} pages")
+    return all_items
 
 
 def save_cache(items):
