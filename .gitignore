@@ -26,8 +26,5 @@ dist/
 # Models (downloaded at runtime)
 models/
 
-# uv
-.venv/
-
 # Worktrees
 .worktrees/
