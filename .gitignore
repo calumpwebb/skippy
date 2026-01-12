@@ -8,3 +8,6 @@ __pycache__/
 
 # uv
 .venv/
+
+# Worktrees
+.worktrees/
