@@ -1703,13 +1703,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-11T01:44:22.528945+00:00",
+    "updated_at": "2026-01-12T16:07:58.48233+00:00",
     "shield_type": null,
     "loot_area": "Nature",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/best-location-to-find-apricots-arc-raiders",
+        "label": "Apricots Guide"
+      },
+      {
+        "url": "https://youtu.be/hLmbaOuzILQ",
+        "label": "Apricots Video"
+      }
+    ],
     "game_asset_id": 1219069540
   },
   {
@@ -7442,13 +7451,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-07T13:15:32.999152+00:00",
+    "updated_at": "2026-01-12T16:00:57.39676+00:00",
     "shield_type": null,
     "loot_area": "Commercial, Residential",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/very-comfortable-pillow-and-cat-bed-in-arc-raiders",
+        "label": "Cat Bed Guide"
+      },
+      {
+        "url": "https://youtu.be/2iWoQJYp2T8",
+        "label": "Cat Bed Video"
+      }
+    ],
     "game_asset_id": 1793382961
   },
   {
@@ -8804,13 +8822,18 @@
     "flavor_text": "",
     "subcategory": "",
     "created_at": "2025-10-08T15:40:30.51648+00:00",
-    "updated_at": "2026-01-06T23:23:41.732868+00:00",
+    "updated_at": "2026-01-12T15:59:13.278927+00:00",
     "shield_type": "",
     "loot_area": "Technological",
     "sources": null,
     "ammo_type": "",
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-cooling-fans-arc-raiders",
+        "label": "Where to Find Cooling Fans Guide"
+      }
+    ],
     "game_asset_id": 1694582967
   },
   {
@@ -9396,13 +9419,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-07T13:24:59.411155+00:00",
+    "updated_at": "2026-01-12T15:44:45.165003+00:00",
     "shield_type": null,
     "loot_area": "Technological",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/database/item/damaged-heat-sink",
+        "label": "Where to Find Damaged Heat Sinks in ARC Raiders"
+      },
+      {
+        "url": "https://youtu.be/zf_pfrTxr_Y",
+        "label": "Damaged Heat Sink Video"
+      }
+    ],
     "game_asset_id": 2022140331
   },
   {
@@ -14519,13 +14551,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-06T23:23:03.606228+00:00",
+    "updated_at": "2026-01-12T15:41:04.291068+00:00",
     "shield_type": null,
     "loot_area": "Technological",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/database/item/fried-motherboard",
+        "label": "Where to Get Fried Motherboards in ARC Raiders"
+      },
+      {
+        "url": "https://youtu.be/lKSIfu2ZRiE",
+        "label": "Fried Motherboards Video"
+      }
+    ],
     "game_asset_id": 748926448
   },
   {
@@ -16992,13 +17033,18 @@
     "flavor_text": "",
     "subcategory": "",
     "created_at": "2025-10-08T16:48:17.017571+00:00",
-    "updated_at": "2026-01-06T23:07:39.43392+00:00",
+    "updated_at": "2026-01-12T15:57:33.858712+00:00",
     "shield_type": "",
     "loot_area": "Residential",
     "sources": null,
     "ammo_type": "",
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-humidifier-arc-raiders",
+        "label": "Where to Find Humidifiers in ARC Raiders"
+      }
+    ],
     "game_asset_id": 849284640
   },
   {
@@ -18599,13 +18645,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-10T00:13:40.773136+00:00",
+    "updated_at": "2026-01-12T18:59:33.061861+00:00",
     "shield_type": null,
     "loot_area": "Medical",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-laboratory-reagents-arc-raiders",
+        "label": "Laboratory Reagents Guide"
+      },
+      {
+        "url": "https://youtu.be/Dm7tgIFVYwc",
+        "label": "Lboratory Reagents Video"
+      }
+    ],
     "game_asset_id": 1364313874
   },
   {
@@ -18941,13 +18996,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-09T21:30:16.256322+00:00",
+    "updated_at": "2026-01-12T16:07:17.767792+00:00",
     "shield_type": null,
     "loot_area": "Nature",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/best-location-to-find-lemons-arc-raiders",
+        "label": "Lemons Guide"
+      },
+      {
+        "url": "https://youtu.be/OM7GcF8sLYQ",
+        "label": "Lemons Video"
+      }
+    ],
     "game_asset_id": 599997416
   },
   {
@@ -19163,13 +19227,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.51415+00:00",
-    "updated_at": "2026-01-06T23:09:33.710573+00:00",
+    "updated_at": "2026-01-12T15:58:29.484331+00:00",
     "shield_type": null,
     "loot_area": "Electrical",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-lightbulbs-arc-raiders",
+        "label": "Where to Find Light bulbs Guide"
+      },
+      {
+        "url": "https://youtu.be/Vl4l0PLjlPg",
+        "label": "Light Bulbs Video"
+      }
+    ],
     "game_asset_id": 1607597452
   },
   {
@@ -21528,13 +21601,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-06T21:39:30.089413+00:00",
+    "updated_at": "2026-01-12T15:38:11.119266+00:00",
     "shield_type": null,
     "loot_area": "Mechanical",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-get-motors-arc-raiders",
+        "label": "Where to Get Motors in ARC Raiders"
+      },
+      {
+        "url": "https://youtu.be/fvtAYO5_Xhs",
+        "label": "Motors Video"
+      }
+    ],
     "game_asset_id": -734190498
   },
   {
@@ -21602,13 +21684,22 @@
     "flavor_text": "",
     "subcategory": "",
     "created_at": "2025-10-08T16:55:42.115912+00:00",
-    "updated_at": "2026-01-07T13:35:49.125552+00:00",
+    "updated_at": "2026-01-12T15:31:29.159011+00:00",
     "shield_type": "",
     "loot_area": "Nature",
     "sources": null,
     "ammo_type": "",
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-mushrooms-arc-raiders",
+        "label": "Where to get Mushrooms Guide"
+      },
+      {
+        "url": "https://youtu.be/G9TFNZ4TeL0",
+        "label": "Mushrooms Video"
+      }
+    ],
     "game_asset_id": -2014230306
   },
   {
@@ -22664,13 +22755,22 @@
     "flavor_text": "",
     "subcategory": "",
     "created_at": "2025-10-08T16:57:11.205607+00:00",
-    "updated_at": "2025-11-19T13:25:51.528471+00:00",
+    "updated_at": "2026-01-12T16:05:59.609816+00:00",
     "shield_type": "",
     "loot_area": "Nature",
     "sources": null,
     "ammo_type": "",
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/best-location-to-find-olives-arc-raiders",
+        "label": "Olives Guide"
+      },
+      {
+        "url": "https://youtu.be/byjiakbl1Ow",
+        "label": "Olives Video"
+      }
+    ],
     "game_asset_id": null
   },
   {
@@ -24434,13 +24534,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-10-05T13:21:02.305+00:00",
-    "updated_at": "2026-01-11T22:51:16.892753+00:00",
+    "updated_at": "2026-01-12T16:06:41.307189+00:00",
     "shield_type": null,
     "loot_area": "Nature",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/best-location-to-find-prickly-pears-arc-raiders",
+        "label": "Prickly Pears Guide"
+      },
+      {
+        "url": "https://youtu.be/QcCFw3VUPug",
+        "label": "Prickly Pears Video"
+      }
+    ],
     "game_asset_id": 721769094
   },
   {
@@ -26533,13 +26642,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-09T21:08:36.372393+00:00",
+    "updated_at": "2026-01-12T16:03:19.932559+00:00",
     "shield_type": null,
     "loot_area": "ARC",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/easiest-way-to-get-rocketeer-driver-arc-raiders",
+        "label": "Rocketeer Driver Guide"
+      },
+      {
+        "url": "https://youtu.be/bu8ijiQZ4b0",
+        "label": "Rocketeer Driver Video"
+      }
+    ],
     "game_asset_id": 1352103757
   },
   {
@@ -27791,13 +27909,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-09T21:10:50.119789+00:00",
+    "updated_at": "2026-01-12T16:04:01.35058+00:00",
     "shield_type": null,
     "loot_area": "Industrial",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-rusted-gear-in-arc-raiders",
+        "label": "Rusted Gear Guide"
+      },
+      {
+        "url": "https://youtu.be/v9vN_EOkq5Y",
+        "label": "Rusted Gear Video"
+      }
+    ],
     "game_asset_id": 287464378
   },
   {
@@ -27865,13 +27992,18 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-06T23:20:03.005346+00:00",
+    "updated_at": "2026-01-12T16:01:35.601762+00:00",
     "shield_type": null,
     "loot_area": "Medical",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-rusted-shut-medical-kit-in-arc-raiders",
+        "label": "Rusted Shut Medical Kit Guide"
+      }
+    ],
     "game_asset_id": 593277545
   },
   {
@@ -28383,7 +28515,7 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-09T19:39:09.820236+00:00",
+    "updated_at": "2026-01-12T16:04:48.517424+00:00",
     "shield_type": null,
     "loot_area": "ARC",
     "sources": null,
@@ -28393,6 +28525,10 @@
       {
         "url": "https://metaforge.app/arc-raiders/best-locations-to-find-sentinel-cores-in-arc-raiders",
         "label": "Sentinel Fire Core Locations"
+      },
+      {
+        "url": "https://youtu.be/-2li4FPoTcA",
+        "label": "Sentinel Firing Core Video"
       }
     ],
     "game_asset_id": -1116709774
@@ -32692,13 +32828,22 @@
     "flavor_text": "",
     "subcategory": "",
     "created_at": "2025-10-19T20:57:29.223473+00:00",
-    "updated_at": "2026-01-06T23:16:40.604184+00:00",
+    "updated_at": "2026-01-12T15:50:36.714137+00:00",
     "shield_type": "",
     "loot_area": "ARC",
     "sources": null,
     "ammo_type": "",
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-find-surveyor-vaults-arc-raiders",
+        "label": "Where to Find Surveyor Vaults in ARC Raiders"
+      },
+      {
+        "url": "https://youtu.be/DwEUYxnbFlQ",
+        "label": "Surveyor Vaults Video"
+      }
+    ],
     "game_asset_id": -1333721780
   },
   {
@@ -36163,13 +36308,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-06T23:25:57.96215+00:00",
+    "updated_at": "2026-01-12T16:00:17.226065+00:00",
     "shield_type": null,
     "loot_area": "Residential, Commercial",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/very-comfortable-pillow-and-cat-bed-in-arc-raiders",
+        "label": "Very Comfortable Pillow Guide"
+      },
+      {
+        "url": "https://youtu.be/2iWoQJYp2T8",
+        "label": "Very Comfortable Pillow Video"
+      }
+    ],
     "game_asset_id": -1286103237
   },
   {
@@ -37201,13 +37355,22 @@
     "flavor_text": null,
     "subcategory": null,
     "created_at": "2025-09-23T18:21:03.915759+00:00",
-    "updated_at": "2026-01-10T00:10:39.772824+00:00",
+    "updated_at": "2026-01-12T15:36:05.52473+00:00",
     "shield_type": null,
     "loot_area": "Industrial",
     "sources": null,
     "ammo_type": null,
     "locations": [],
-    "guide_links": [],
+    "guide_links": [
+      {
+        "url": "https://metaforge.app/arc-raiders/where-to-get-water-filters-in-arc-raiders-fast-and-easy",
+        "label": "Water Filters Guide"
+      },
+      {
+        "url": "https://youtu.be/d8UipOQwH2I",
+        "label": "Water Filters Video"
+      }
+    ],
     "game_asset_id": 1393527984
   },
   {

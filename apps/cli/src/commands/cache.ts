@@ -50,6 +50,9 @@ export function createCacheCommand(): Command {
           dataDir,
           generateTypes: options.types,
           generateFixtures: options.fixtures,
+          onProgress: (endpoint, index, total) => {
+            console.log(pc.yellow(`[${index + 1}/${total}] ${endpoint}`));
+          },
         });
 
         console.log();

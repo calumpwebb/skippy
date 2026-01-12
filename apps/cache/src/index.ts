@@ -12,6 +12,8 @@ export interface CacheOptions {
   endpoints: Endpoint[];
   generateTypes: boolean;
   generateFixtures: boolean;
+  /** Called when starting to process an endpoint. */
+  onProgress?: (endpoint: Endpoint, index: number, total: number) => void;
 }
 
 export interface CacheResult {
@@ -50,7 +52,9 @@ export async function runCache(
 
   const results: CacheResult[] = [];
 
-  for (const endpoint of endpoints) {
+  for (const [i, endpoint] of endpoints.entries()) {
+    opts.onProgress?.(endpoint, i, endpoints.length);
+
     const endpointDir = join(dataDir, endpoint);
     await mkdir(endpointDir, { recursive: true });
 
