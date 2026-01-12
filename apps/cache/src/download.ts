@@ -46,7 +46,8 @@ export async function downloadEndpoint(endpoint: Endpoint): Promise<unknown> {
       clearTimeout(timeoutId);
 
       if (attempt < MAX_RETRIES - 1 && shouldRetry(error)) {
-        await sleep(RETRY_DELAYS[attempt]);
+        const delay = RETRY_DELAYS[attempt] ?? 1000;
+        await sleep(delay);
         continue;
       }
       throw error;
