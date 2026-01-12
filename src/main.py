@@ -60,9 +60,9 @@ def download_endpoint(endpoint_name, limit=50):
         print(f"Downloaded {len(all_data)} {endpoint_name} across {page} pages")
         return all_data
     else:
-        # Non-paginated endpoint - return as-is
+        # Non-paginated endpoint - extract data if present
         print(f"  Downloaded {endpoint_name}")
-        return data
+        return data.get("data", data)
 
 
 def save_cache(endpoint_name, data):
