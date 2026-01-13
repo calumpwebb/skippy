@@ -1,6 +1,7 @@
 import { betterAuth } from 'better-auth';
 import { drizzleAdapter } from 'better-auth/adapters/drizzle';
 import { jwt } from 'better-auth/plugins';
+import bcrypt from 'bcryptjs';
 import { db } from '@/db';
 import * as schema from '@/db/schema';
 
@@ -18,10 +19,10 @@ export const auth = betterAuth({
     enabled: true,
     password: {
       hash: async (password: string): Promise<string> => {
-        return await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 });
+        return bcrypt.hash(password, 10);
       },
       verify: async ({ hash, password }: { hash: string; password: string }): Promise<boolean> => {
-        return await Bun.password.verify(password, hash);
+        return bcrypt.compare(password, hash);
       },
     },
   },
