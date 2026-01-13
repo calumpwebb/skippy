@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "skippy": {
+      "command": "bun",
+      "args": ["run", "skippy", "mcp", "--data-dir", "./data"],
+      "cwd": "/Users/calum/Development/skippy"
+    }
+  }
+}

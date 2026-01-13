@@ -11,7 +11,6 @@ export function createCacheCommand(): Command {
     .option('-d, --data-dir <path>', 'Data directory', './data')
     .option('--no-types', 'Skip TypeScript type generation')
     .option('--no-fixtures', 'Skip test fixture generation')
-    .option('--dry-run', 'Show what would be done without making changes')
     .action(async options => {
       const config = getConfig();
       const logger = new Logger(config);
@@ -29,22 +28,6 @@ export function createCacheCommand(): Command {
       console.log(pc.cyan('skippy cache') + ' - updating game data...');
       console.log();
 
-      if (options.dryRun) {
-        console.log(pc.yellow('DRY RUN - no changes will be made'));
-        console.log();
-        console.log('Would download:');
-        console.log('  - items');
-        console.log('  - arcs');
-        console.log('  - quests');
-        console.log('  - traders');
-        console.log('  - events');
-        console.log();
-        console.log(`Data directory: ${dataDir}`);
-        console.log(`Generate types: ${options.types}`);
-        console.log(`Generate fixtures: ${options.fixtures}`);
-        return;
-      }
-
       try {
         const results = await runCache(config, logger, {
           dataDir,
@@ -59,14 +42,15 @@ export function createCacheCommand(): Command {
         const failures = results.filter(r => !r.success);
         if (failures.length > 0) {
           console.log(pc.red(`Cache update completed with ${failures.length} failure(s)`));
-          process.exitCode = 1;
+          process.exit(1);
         } else {
           console.log(pc.green('Cache update complete!'));
+          process.exit(0);
         }
       } catch (error) {
         logger.error('Cache failed', { error: formatError(error) });
         console.error(pc.red('Cache update failed:'), formatError(error));
-        process.exitCode = 1;
+        process.exit(1);
       }
     });
 

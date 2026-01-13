@@ -41,13 +41,6 @@ describe('CLI', () => {
     expect(dataDirOption).toBeDefined();
   });
 
-  test('cache command has dry-run option', () => {
-    const cacheCmd = createCacheCommand();
-    const options = cacheCmd.options;
-    const dryRunOption = options.find(opt => opt.long === '--dry-run');
-    expect(dryRunOption).toBeDefined();
-  });
-
   test('cache command has no-types option', () => {
     const cacheCmd = createCacheCommand();
     const options = cacheCmd.options;

@@ -6,3 +6,8 @@ export async function atomicWrite(path: string, content: string | Uint8Array): P
   await Bun.write(tempPath, content);
   await rename(tempPath, path);
 }
+
+/** Ensures string ends with exactly one newline. */
+export function ensureTrailingNewline(content: string): string {
+  return content.replace(/\n*$/, '\n');
+}

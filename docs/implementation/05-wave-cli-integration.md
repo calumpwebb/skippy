@@ -10,6 +10,7 @@
 **Depends on:** Wave 4 complete
 **Can run parallel with:** 5B, 5C
 **Files Created:**
+
 - `apps/cli/src/index.ts`
 - `apps/cli/src/commands/cache.ts`
 - `apps/cli/src/commands/mcp.ts`
@@ -76,7 +77,7 @@ export function createCacheCommand(): Command {
     .option('-d, --data-dir <path>', 'Data directory', './data')
     .option('--no-types', 'Skip TypeScript type generation')
     .option('--no-fixtures', 'Skip test fixture generation')
-    .action(async (options) => {
+    .action(async options => {
       const config = new Config(process.env);
       const logger = new Logger(config);
 
@@ -117,7 +118,7 @@ export function createMcpCommand(): Command {
   const command = new Command('mcp')
     .description('Start the MCP server for Claude integration')
     .option('-d, --data-dir <path>', 'Data directory', './data')
-    .action(async (options) => {
+    .action(async options => {
       const config = new Config(process.env);
       const logger = new Logger(config);
 
@@ -187,6 +188,7 @@ bun run apps/cli/src/index.ts cache
 ```
 
 ### Checkpoint 5A
+
 - [ ] Tests pass
 - [ ] `skippy --help` shows commands
 - [ ] `skippy cache` downloads data
@@ -199,6 +201,7 @@ bun run apps/cli/src/index.ts cache
 **Depends on:** Wave 4 complete
 **Can run parallel with:** 5A, 5C
 **Files Created:**
+
 - `test/integration/search.test.ts`
 - `test/integration/mcp.test.ts`
 
@@ -220,7 +223,7 @@ describe('Search Integration', () => {
 
     // Load real data
     const dataFile = Bun.file(join(dataPath, 'data.json'));
-    const items = await dataFile.json() as Record<string, unknown>[];
+    const items = (await dataFile.json()) as Record<string, unknown>[];
 
     // Load real embeddings
     const embeddings = await loadEmbeddings(join(dataPath, 'embeddings.bin'), 384);
@@ -317,6 +320,7 @@ bun test test/integration
 **Expected:** All tests PASS.
 
 ### Checkpoint 5B
+
 - [ ] Integration tests pass
 - [ ] Search works with real data
 - [ ] MCP server creates with all tools
@@ -328,6 +332,7 @@ bun test test/integration
 **Depends on:** All previous waves
 **Can run parallel with:** 5A, 5B
 **Files Created/Updated:**
+
 - `README.md` (root)
 - `.env.example`
 
@@ -335,7 +340,7 @@ bun test test/integration
 
 Create/update `README.md`:
 
-```markdown
+````markdown
 # Skippy
 
 Arc Raiders game data cache and MCP server for Claude integration.
@@ -361,6 +366,7 @@ git clone https://github.com/yourusername/skippy.git
 cd skippy
 bun install
 ```
+````
 
 ### Download Game Data
 
@@ -369,6 +375,7 @@ bun run skippy cache
 ```
 
 This downloads all game data from MetaForge API and generates:
+
 - Data files in `data/`
 - TypeScript types in `packages/shared/src/types/`
 - Test fixtures in `test/fixtures/`
@@ -397,18 +404,18 @@ Add to your `.mcp.json`:
 
 ## Available Tools
 
-| Tool | Description |
-|------|-------------|
-| `search_items` | Search for items by name, type, or description |
-| `search_arcs` | Search for ARCs (enemies) by name or description |
-| `search_quests` | Search for quests by name, objectives, or trader |
-| `search_traders` | Search for traders and their inventories |
-| `get_events` | Get current and upcoming game events |
+| Tool             | Description                                      |
+| ---------------- | ------------------------------------------------ |
+| `search_items`   | Search for items by name, type, or description   |
+| `search_arcs`    | Search for ARCs (enemies) by name or description |
+| `search_quests`  | Search for quests by name, objectives, or trader |
+| `search_traders` | Search for traders and their inventories         |
+| `get_events`     | Get current and upcoming game events             |
 
 ## Resources
 
-| Resource | Description |
-|----------|-------------|
+| Resource                 | Description                      |
+| ------------------------ | -------------------------------- |
 | `arc-raiders://glossary` | Game terminology and definitions |
 
 ## Development
@@ -451,7 +458,8 @@ bun run skippy cache
 ## License
 
 MIT
-```
+
+````
 
 ### Step 2: Create .env.example
 
@@ -467,9 +475,10 @@ DATA_DIR=./data
 # Embedding model (default works well)
 EMBEDDING_MODEL_NAME=Xenova/all-MiniLM-L6-v2
 EMBEDDING_MODEL_CACHE_DIR=./models
-```
+````
 
 ### Checkpoint 5C
+
 - [ ] README.md documents all features
 - [ ] Quick start guide is accurate
 - [ ] .env.example has all variables
@@ -480,6 +489,7 @@ EMBEDDING_MODEL_CACHE_DIR=./models
 
 **Depends on:** Tasks 5A-5C complete
 **Files Modified:**
+
 - `apps/cli/src/commands/cache.ts`
 - `apps/cli/src/commands/mcp.ts`
 - `apps/cli/src/index.ts`
@@ -545,8 +555,7 @@ export function createCacheCommand(): Command {
     .option('-d, --data-dir <path>', 'Data directory', './data')
     .option('--no-types', 'Skip TypeScript type generation')
     .option('--no-fixtures', 'Skip test fixture generation')
-    .option('--dry-run', 'Show what would be done without making changes')
-    .action(async (options) => {
+    .action(async options => {
       const config = getConfig();
       const logger = new Logger(config);
 
@@ -565,16 +574,11 @@ export function createCacheCommand(): Command {
       console.log(pc.cyan('╚═══════════════════════════════════════╝'));
       console.log();
 
-      if (options.dryRun) {
-        console.log(pc.yellow('DRY RUN - no changes will be made'));
-      }
-
       try {
         await runCache(config, logger, {
           dataDir,
           generateTypes: options.types,
           generateFixtures: options.fixtures,
-          dryRun: options.dryRun,
         });
 
         console.log();
@@ -608,7 +612,7 @@ export function createMcpCommand(): Command {
   const command = new Command('mcp')
     .description('Start the MCP server for Claude integration')
     .option('-d, --data-dir <path>', 'Data directory', './data')
-    .action(async (options) => {
+    .action(async options => {
       const config = getConfig();
       const logger = new Logger(config);
 
@@ -633,7 +637,6 @@ export function createMcpCommand(): Command {
 
         // Graceful shutdown is now handled by startServer
         // but we can add additional cleanup here if needed
-
       } catch (error) {
         if (error instanceof Error) {
           console.error('MCP server failed:', error.message);
@@ -704,9 +707,9 @@ describe('Server Health', () => {
 ```
 
 ### Checkpoint 5D
+
 - [ ] Path validation rejects `..` traversal
 - [ ] CLI uses `process.exitCode` instead of `process.exit()`
-- [ ] Cache command supports `--dry-run` flag
 - [ ] MCP command handles graceful shutdown
 - [ ] Version is read from package.json
 - [ ] Health check test passes

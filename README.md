@@ -27,7 +27,7 @@ bun install
 ### Download Game Data
 
 ```bash
-bun run apps/cli/src/index.ts cache
+bun run skippy cache
 ```
 
 This downloads all game data from MetaForge API and generates:
@@ -40,7 +40,7 @@ This downloads all game data from MetaForge API and generates:
 ### Start MCP Server
 
 ```bash
-bun run apps/cli/src/index.ts mcp
+bun run skippy mcp
 ```
 
 ### Configure Claude Code
@@ -52,7 +52,7 @@ Add to your `.mcp.json`:
   "mcpServers": {
     "arc-raiders": {
       "command": "bun",
-      "args": ["run", "/path/to/skippy/apps/cli/src/index.ts", "mcp"]
+      "args": ["run", "skippy", "mcp"]
     }
   }
 }
@@ -62,20 +62,17 @@ Add to your `.mcp.json`:
 
 ```bash
 # Show help
-bun run apps/cli/src/index.ts --help
+bun run skippy --help
 
 # Download and cache game data
-bun run apps/cli/src/index.ts cache
-
-# Dry run (show what would be done)
-bun run apps/cli/src/index.ts cache --dry-run
+bun run skippy cache
 
 # Start MCP server
-bun run apps/cli/src/index.ts mcp
+bun run skippy mcp
 
 # Use custom data directory
-bun run apps/cli/src/index.ts cache --data-dir ./custom-data
-bun run apps/cli/src/index.ts mcp --data-dir ./custom-data
+bun run skippy cache --data-dir ./custom-data
+bun run skippy mcp --data-dir ./custom-data
 ```
 
 ## Available Tools
@@ -145,7 +142,7 @@ bun run format
 ### Updating Data
 
 ```bash
-bun run apps/cli/src/index.ts cache
+bun run skippy cache
 ```
 
 ## Environment Variables

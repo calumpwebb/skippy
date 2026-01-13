@@ -79,11 +79,7 @@
     "name": "Adrenaline Shot",
     "description": "A serum that fully restores stamina and temporarily increases stamina regeneration",
     "item_type": "Quick Use",
-    "loadout_slots": [
-      "backpack",
-      "quickUse",
-      "safePocket"
-    ],
+    "loadout_slots": ["backpack", "quickUse", "safePocket"],
     "icon": "https://cdn.metaforge.app/arc-raiders/icons/adrenaline-shot.webp",
     "rarity": "Common",
     "value": 300,
@@ -231,10 +227,7 @@
     "name": "Advanced Electrical Components",
     "description": "Used to craft a wide range of items. Can be recycled into crafting materials.",
     "item_type": "Refined Material",
-    "loadout_slots": [
-      "backpack",
-      "safePocket"
-    ],
+    "loadout_slots": ["backpack", "safePocket"],
     "icon": "https://cdn.metaforge.app/arc-raiders/icons/advanced-electrical-components.webp",
     "rarity": "Rare",
     "value": 1750,
@@ -308,10 +301,7 @@
     "name": "Advanced Mechanical Components",
     "description": "Mostly used to craft advanced weapons. Can be recycled into crafting materials.",
     "item_type": "Advanced Material",
-    "loadout_slots": [
-      "backpack",
-      "safePocket"
-    ],
+    "loadout_slots": ["backpack", "safePocket"],
     "icon": "https://cdn.metaforge.app/arc-raiders/icons/advanced-mechanical-components.webp",
     "rarity": "Rare",
     "value": 1750,

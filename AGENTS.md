@@ -18,6 +18,5 @@ This is Skippy - an Arc Raiders game data cache and MCP server.
 bun test              # Run all tests
 bun run lint          # Lint
 bun run typecheck     # Type check
-skippy cache          # Download game data
-skippy mcp            # Start MCP server
+bun run skippy        # Run skippy CLI
 ```
