@@ -4,6 +4,11 @@ import { mkdirSync, existsSync } from 'node:fs';
 
 const DB_PATH = './data/skippy.db';
 
+/** Hash password using bcrypt (compatible with better-auth). */
+async function hashPassword(password: string): Promise<string> {
+  return await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 });
+}
+
 // Ensure data directory exists
 if (!existsSync('./data')) {
   mkdirSync('./data', { recursive: true });
@@ -81,16 +86,20 @@ db.run(`CREATE TABLE IF NOT EXISTS messages (
 console.log('Tables created.');
 
 // Seed default user
-const email = process.env.SEED_EMAIL ?? 'admin@skippy.local';
-const password = process.env.SEED_PASSWORD ?? 'password';
-const name = process.env.SEED_NAME ?? 'Admin';
+async function seedUser(): Promise<void> {
+  const email = process.env.SEED_EMAIL ?? 'admin@skippy.local';
+  const password = process.env.SEED_PASSWORD ?? 'password';
+  const name = process.env.SEED_NAME ?? 'Admin';
 
-const existing = db.query('SELECT id FROM users WHERE email = ?').get(email);
-if (existing) {
-  console.log(`User ${email} already exists.`);
-} else {
+  const existing = db.query('SELECT id FROM users WHERE email = ?').get(email);
+  if (existing) {
+    console.log(`User ${email} already exists.`);
+    return;
+  }
+
   const userId = nanoid();
   const now = Math.floor(Date.now() / 1000);
+  const hashedPassword = await hashPassword(password);
 
   db.run('INSERT INTO users (id, email, name, created_at, updated_at) VALUES (?, ?, ?, ?, ?)', [
     userId,
@@ -102,10 +111,11 @@ if (existing) {
 
   db.run(
     'INSERT INTO accounts (id, user_id, account_id, provider_id, password, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
-    [nanoid(), userId, userId, 'credential', password, now, now]
+    [nanoid(), userId, userId, 'credential', hashedPassword, now, now]
   );
 
   console.log(`User created: ${email}`);
 }
 
+await seedUser();
 console.log('Seed complete.');
