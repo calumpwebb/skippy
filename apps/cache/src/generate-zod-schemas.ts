@@ -63,6 +63,20 @@ function collectArrayElements(items: unknown[], key: string): unknown[] {
   return elements;
 }
 
+/** Collects all nested objects for a given key across all items. */
+function collectNestedObjects(items: unknown[], key: string): unknown[] {
+  const nested: unknown[] = [];
+  for (const item of items) {
+    if (typeof item !== 'object' || item === null) continue;
+    const record = item as Record<string, unknown>;
+    const value = record[key];
+    if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+      nested.push(value);
+    }
+  }
+  return nested;
+}
+
 /** Checks if a field has null values in any item. */
 function hasNullValues(items: unknown[], key: string): boolean {
   for (const item of items) {
@@ -86,7 +100,8 @@ function createFieldInfo(key: string, value: unknown, allItems: unknown[]): Fiel
 
   // Handle nested objects (but not null)
   if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-    info.nestedFields = analyzeFields([value], allItems);
+    const allNestedObjects = collectNestedObjects(allItems, key);
+    info.nestedFields = analyzeFields(allNestedObjects, allItems);
   }
 
   // Handle arrays
@@ -96,7 +111,7 @@ function createFieldInfo(key: string, value: unknown, allItems: unknown[]): Fiel
       const firstElement = nonEmptyArray[0];
       if (typeof firstElement === 'object' && firstElement !== null) {
         const allArrayElements = collectArrayElements(allItems, key);
-        info.arrayElementFields = analyzeFields(allArrayElements, allItems);
+        info.arrayElementFields = analyzeFields(allArrayElements);
         info.type = '__object_array__';
       }
     }
