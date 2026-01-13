@@ -1,15 +1,30 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { Endpoint } from '@skippy/shared';
+import {
+  ItemSchema,
+  ArcSchema,
+  QuestSchema,
+  TraderSchema,
+  EventSchema,
+  extractFieldPaths,
+} from '@skippy/shared';
+import { z } from 'zod';
 
 export interface Schema {
   fields: string[];
 }
 
-export async function loadSchema(dataDir: string, endpoint: Endpoint): Promise<Schema> {
-  const schemaPath = join(dataDir, endpoint, 'schema.json');
-  const content = readFileSync(schemaPath, 'utf-8');
-  return JSON.parse(content) as Schema;
+const ENTITY_SCHEMAS: Record<Endpoint, z.ZodObject<z.ZodRawShape>> = {
+  [Endpoint.ITEMS]: ItemSchema,
+  [Endpoint.ARCS]: ArcSchema,
+  [Endpoint.QUESTS]: QuestSchema,
+  [Endpoint.TRADERS]: TraderSchema,
+  [Endpoint.EVENTS]: EventSchema,
+};
+
+export function loadSchema(_dataDir: string, endpoint: Endpoint): Schema {
+  const zodSchema = ENTITY_SCHEMAS[endpoint];
+  const fields = extractFieldPaths(zodSchema);
+  return { fields };
 }
 
 export function validateFields(schema: Schema, requestedFields: string[]): void {

@@ -6,15 +6,37 @@ import { Endpoint } from '@skippy/shared';
 const fixturesDir = resolve(import.meta.dirname, '../fixtures');
 
 describe('loadSchema', () => {
-  test('loads schema from JSON file', async () => {
-    const schema = await loadSchema(fixturesDir, Endpoint.ITEMS);
+  test('extracts field paths from Zod schema', () => {
+    const schema = loadSchema(fixturesDir, Endpoint.ITEMS);
 
     expect(schema).toHaveProperty('fields');
     expect(Array.isArray(schema.fields)).toBe(true);
+    expect(schema.fields.length).toBeGreaterThan(0);
+    // Check for some expected fields
+    expect(schema.fields).toContain('id');
+    expect(schema.fields).toContain('name');
   });
 
-  test('throws error for non-existent endpoint', async () => {
-    await expect(loadSchema(fixturesDir, 'nonexistent' as Endpoint)).rejects.toThrow();
+  test('extracts nested field paths', () => {
+    const schema = loadSchema(fixturesDir, Endpoint.ITEMS);
+
+    // Items have nested stat_block
+    expect(schema.fields.some(f => f.startsWith('stat_block.'))).toBe(true);
+  });
+
+  test('works for all endpoints', () => {
+    const endpoints = [
+      Endpoint.ITEMS,
+      Endpoint.ARCS,
+      Endpoint.QUESTS,
+      Endpoint.TRADERS,
+      Endpoint.EVENTS,
+    ];
+
+    for (const endpoint of endpoints) {
+      const schema = loadSchema(fixturesDir, endpoint);
+      expect(schema.fields.length).toBeGreaterThan(0);
+    }
   });
 });
 

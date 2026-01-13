@@ -101,7 +101,7 @@ export async function loadAllData(
     endpointLogger.info(`Loaded embeddings.bin (${formatBytes(embeddingsSize)})`);
 
     // Load schema
-    const schema = await loadSchema(dataDir, endpoint);
+    const schema = loadSchema(dataDir, endpoint);
     schemas[endpoint] = schema;
 
     // Create searcher
@@ -129,7 +129,7 @@ export async function loadAllData(
   logger.info(`Loaded events/data.json (${formatBytes(eventsSize)}, ${events.length} events)`);
 
   // Load events schema
-  schemas[Endpoint.EVENTS] = await loadSchema(dataDir, Endpoint.EVENTS);
+  schemas[Endpoint.EVENTS] = loadSchema(dataDir, Endpoint.EVENTS);
 
   logger.success('All game data loaded');
 
