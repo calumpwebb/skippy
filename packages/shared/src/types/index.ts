@@ -1,15 +1,18 @@
 export * from './search';
-export * from './items';
-export * from './arcs';
-export * from './quests';
-export * from './traders';
-export * from './events';
 
-import type { Item } from './items';
-import type { Arc } from './arcs';
-import type { Quest } from './quests';
-import type { Trader } from './traders';
-import type { Event } from './events';
+// Re-export types from schemas for backward compatibility
+export type { Item } from '../schemas/items';
+export type { Arc } from '../schemas/arcs';
+export type { Quest } from '../schemas/quests';
+export type { Trader } from '../schemas/traders';
+export type { Event } from '../schemas/events';
+
+// Union types
+import type { Item } from '../schemas/items';
+import type { Arc } from '../schemas/arcs';
+import type { Quest } from '../schemas/quests';
+import type { Trader } from '../schemas/traders';
+import type { Event } from '../schemas/events';
 
 /** Union of all searchable entity types (used by HybridSearcher). */
 export type SearchableEntity = Item | Arc | Quest | Trader;
