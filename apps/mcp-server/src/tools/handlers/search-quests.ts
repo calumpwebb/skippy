@@ -1,8 +1,15 @@
 import { z } from 'zod';
-import { BaseSearchParamsSchema, BaseSearchResult, Endpoint } from '@skippy/shared';
+import {
+  BaseSearchParamsSchema,
+  BaseSearchResult,
+  Endpoint,
+  Quest,
+  SearchableEntity,
+} from '@skippy/shared';
 import { HybridSearcher, Embedder, loadEmbeddings } from '@skippy/search';
 import { join } from 'node:path';
 import type { ServerContext } from '../../server';
+import { loadSchema, validateFields, Schema } from '../../utils/schema';
 
 export const SearchQuestsParamsSchema = BaseSearchParamsSchema.extend({
   // Quest-specific extensions can be added here
@@ -29,17 +36,14 @@ export function validateFieldPath(path: string): void {
 }
 
 /** Gets a nested value from an object using dot notation. */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+function getNestedValue(obj: Quest, path: string): unknown {
   return path
     .split('.')
     .reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], obj);
 }
 
 /** Extracts specified fields from an item. */
-export function extractFields(
-  item: Record<string, unknown>,
-  fields?: string[]
-): Record<string, unknown> {
+export function extractFields(item: Quest, fields?: string[]): Partial<Quest> {
   if (!fields || fields.length === 0) {
     return item;
   }
@@ -60,12 +64,10 @@ export function extractFields(
 }
 
 /** Gets or creates a cached HybridSearcher for quests. */
-async function getSearcher(
-  context: ServerContext
-): Promise<HybridSearcher<Record<string, unknown>>> {
+async function getSearcher(context: ServerContext): Promise<HybridSearcher<Quest>> {
   const cacheKey = Endpoint.QUESTS;
   const cached = context.searcherCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as HybridSearcher<Quest>;
 
   const dataPath = join(context.dataDir, 'quests');
 
@@ -74,7 +76,7 @@ async function getSearcher(
   if (!(await dataFile.exists())) {
     throw new Error('Quests data not found. Run: skippy cache');
   }
-  const quests = (await dataFile.json()) as Record<string, unknown>[];
+  const quests = (await dataFile.json()) as Quest[];
 
   // Load embeddings
   const embeddingsPath = join(dataPath, 'embeddings.bin');
@@ -91,7 +93,7 @@ async function getSearcher(
   });
   await embedder.initialize();
 
-  const searcher = new HybridSearcher(
+  const searcher = new HybridSearcher<Quest>(
     quests,
     embeddings,
     embedder,
@@ -100,17 +102,39 @@ async function getSearcher(
     'id'
   );
 
-  context.searcherCache.set(cacheKey, searcher);
+  context.searcherCache.set(cacheKey, searcher as HybridSearcher<SearchableEntity>);
   return searcher;
+}
+
+/** Gets or creates a cached schema for quests. */
+async function getSchema(context: ServerContext): Promise<Schema | null> {
+  const cacheKey = Endpoint.QUESTS;
+  const cached = context.schemaCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const schema = await loadSchema(context.dataDir, Endpoint.QUESTS);
+    context.schemaCache.set(cacheKey, schema);
+    return schema;
+  } catch {
+    return null;
+  }
 }
 
 /** Searches for quests using hybrid semantic + fuzzy search. */
 export async function searchQuests(
   params: unknown,
   context: ServerContext
-): Promise<BaseSearchResult<Record<string, unknown>>> {
+): Promise<BaseSearchResult<Partial<Quest>>> {
   const validated = SearchQuestsParamsSchema.parse(params);
   const { query, fields, limit } = validated;
+
+  if (fields && fields.length > 0) {
+    const schema = await getSchema(context);
+    if (schema) {
+      validateFields(schema, fields);
+    }
+  }
 
   const searcher = await getSearcher(context);
   const results = await searcher.search(query, limit);

@@ -1,9 +1,12 @@
 import { describe, test, expect } from 'vitest';
+import { Trader } from '@skippy/shared';
 import {
   SearchTradersParamsSchema,
   extractFields,
   validateFieldPath,
+  TRADER_ID_FIELD,
 } from '../../src/tools/handlers/search-traders';
+import { validateFields, Schema } from '../../src/utils/schema';
 
 describe('SearchTradersParamsSchema', () => {
   test('extends BaseSearchParamsSchema with query, fields, limit', () => {
@@ -32,21 +35,60 @@ describe('validateFieldPath (Traders)', () => {
   });
 });
 
+describe('TRADER_ID_FIELD', () => {
+  test('is name', () => {
+    expect(TRADER_ID_FIELD).toBe('name');
+  });
+});
+
 describe('extractFields (Traders)', () => {
-  const sampleTrader = {
-    id: 'weapons-dealer',
+  const sampleTrader: Trader = {
     name: 'Weapons Dealer',
-    description: 'Sells guns and ammo',
-    inventory: [{ id: 'rifle', quantity: 5 }],
+    items: [
+      {
+        id: 'rifle',
+        icon: 'rifle.png',
+        name: 'Rifle',
+        value: 100,
+        rarity: 'common',
+        item_type: 'weapon',
+        description: 'A rifle',
+        trader_price: 50,
+      },
+    ],
   };
 
   test('returns full item when no fields specified', () => {
-    const result = extractFields(sampleTrader, undefined);
+    const result = extractFields(sampleTrader as unknown as Record<string, unknown>, undefined);
     expect(result).toEqual(sampleTrader);
   });
 
   test('extracts only requested fields', () => {
-    const result = extractFields(sampleTrader, ['name']);
+    const result = extractFields(sampleTrader as unknown as Record<string, unknown>, ['name']);
     expect(result).toEqual({ name: 'Weapons Dealer' });
+  });
+});
+
+describe('field validation', () => {
+  const mockSchema: Schema = {
+    fields: ['name', 'items', 'inventory', 'inventory.weapons'],
+  };
+
+  test('validateFields accepts valid fields', () => {
+    expect(() => validateFields(mockSchema, ['name', 'items'])).not.toThrow();
+  });
+
+  test('validateFields accepts nested field paths', () => {
+    expect(() => validateFields(mockSchema, ['inventory.weapons'])).not.toThrow();
+  });
+
+  test('validateFields rejects invalid field paths', () => {
+    expect(() => validateFields(mockSchema, ['invalid_trader_field'])).toThrow(
+      'Invalid field: invalid_trader_field'
+    );
+  });
+
+  test('validateFields rejects partially invalid field paths', () => {
+    expect(() => validateFields(mockSchema, ['name', 'invalid'])).toThrow('Invalid field: invalid');
   });
 });

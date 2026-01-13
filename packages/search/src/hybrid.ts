@@ -53,7 +53,7 @@ export interface HybridSearchConfig {
 }
 
 /** Combines semantic and fuzzy search for best results. */
-export class HybridSearcher<T extends Record<string, unknown>> {
+export class HybridSearcher<T extends object> {
   private readonly items: T[];
   private readonly embeddings: number[][];
   private readonly fuzzySearcher: FuzzySearcher<T>;
@@ -80,6 +80,11 @@ export class HybridSearcher<T extends Record<string, unknown>> {
     });
   }
 
+  /** Gets the ID value from an item using the configured idField. */
+  private getId(item: T): string {
+    return String((item as Record<string, unknown>)[this.idField]);
+  }
+
   /** Performs hybrid search combining semantic and fuzzy matching. */
   async search(query: string, limit: number = 5): Promise<T[]> {
     // 1. Semantic search
@@ -88,7 +93,7 @@ export class HybridSearcher<T extends Record<string, unknown>> {
 
     // 2. Fuzzy search
     const fuzzyResults = this.fuzzySearcher.search(query, limit * 2).map(r => ({
-      id: String(r.item[this.idField]),
+      id: this.getId(r.item),
       score: r.score,
     }));
 
@@ -96,7 +101,7 @@ export class HybridSearcher<T extends Record<string, unknown>> {
     const merged = mergeResults(semanticResults, fuzzyResults, limit);
 
     // 4. Map back to items
-    const idToItem = new Map(this.items.map(item => [String(item[this.idField]), item]));
+    const idToItem = new Map(this.items.map(item => [this.getId(item), item]));
     return merged.map(r => idToItem.get(r.id)!).filter(Boolean);
   }
 
@@ -110,7 +115,7 @@ export class HybridSearcher<T extends Record<string, unknown>> {
 
       const score = cosineSimilarity(queryEmbedding, embedding);
       scored.push({
-        id: String(item[this.idField]),
+        id: this.getId(item),
         score,
       });
     }

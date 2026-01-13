@@ -1,55 +1,74 @@
 import { pipeline } from '@xenova/transformers';
 import type { FeatureExtractionPipeline } from '@xenova/transformers';
 import { Endpoint } from '@skippy/shared';
+import type { Item, Arc, Quest, Trader, Event, GameEntity } from '@skippy/shared';
 
 export interface EmbedderConfig {
   modelName: string;
   cacheDir: string;
 }
 
-/** Creates searchable text from an entity based on its type. */
-export function createSearchableText(endpoint: Endpoint, entity: Record<string, unknown>): string {
+export function createSearchableText(endpoint: typeof Endpoint.ITEMS, entity: Item): string;
+export function createSearchableText(endpoint: typeof Endpoint.ARCS, entity: Arc): string;
+export function createSearchableText(endpoint: typeof Endpoint.QUESTS, entity: Quest): string;
+export function createSearchableText(endpoint: typeof Endpoint.TRADERS, entity: Trader): string;
+export function createSearchableText(endpoint: typeof Endpoint.EVENTS, entity: Event): string;
+export function createSearchableText(endpoint: Endpoint, entity: GameEntity): string;
+export function createSearchableText(endpoint: Endpoint, entity: GameEntity): string {
   const parts: string[] = [];
 
   switch (endpoint) {
     case Endpoint.ITEMS: {
-      if (entity.name) parts.push(String(entity.name));
-      if (entity.description) parts.push(String(entity.description));
-      if (entity.item_type) parts.push(String(entity.item_type));
-      if (entity.rarity) parts.push(String(entity.rarity));
+      const item = entity as Item;
+      if (item.name) parts.push(item.name);
+      if (item.description) parts.push(item.description);
+      if (item.item_type) parts.push(item.item_type);
+      if (item.rarity) parts.push(item.rarity);
       break;
     }
     case Endpoint.ARCS: {
-      if (entity.name) parts.push(String(entity.name));
-      if (entity.description) parts.push(String(entity.description));
+      const arc = entity as Arc;
+      if (arc.name) parts.push(arc.name);
+      if (arc.description) parts.push(arc.description);
       break;
     }
     case Endpoint.QUESTS: {
-      if (entity.name) parts.push(String(entity.name));
-      if (Array.isArray(entity.objectives)) {
-        parts.push(...entity.objectives.map(String));
+      const quest = entity as Quest;
+      if (quest.name) parts.push(quest.name);
+      if (Array.isArray(quest.objectives)) {
+        parts.push(...quest.objectives);
       }
-      if (entity.trader_name) parts.push(String(entity.trader_name));
+      if (quest.trader_name) parts.push(quest.trader_name);
       break;
     }
     case Endpoint.TRADERS: {
-      if (entity.name) parts.push(String(entity.name));
-      if (entity.description) parts.push(String(entity.description));
+      const trader = entity as Trader;
+      if (trader.name) parts.push(trader.name);
+      addTraderItems(trader.items, parts);
       break;
     }
     case Endpoint.EVENTS: {
-      if (entity.name) parts.push(String(entity.name));
-      if (entity.description) parts.push(String(entity.description));
+      const event = entity as Event;
+      if (event.name) parts.push(event.name);
+      if (event.map) parts.push(event.map);
       break;
     }
     default: {
-      // Exhaustive check - if new endpoint added, this will fail compilation
       const _exhaustive: never = endpoint;
       throw new Error(`Unknown endpoint: ${_exhaustive}`);
     }
   }
 
   return parts.join(' ');
+}
+
+/** Adds trader item names and descriptions to the search text parts. */
+function addTraderItems(items: Trader['items'] | undefined, parts: string[]): void {
+  if (!Array.isArray(items)) return;
+  for (const item of items) {
+    if (item.name) parts.push(item.name);
+    if (item.description) parts.push(item.description);
+  }
 }
 
 /** Generates embeddings using a local transformer model. */

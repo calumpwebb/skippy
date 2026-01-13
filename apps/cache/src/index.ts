@@ -1,6 +1,26 @@
-import { mkdir } from 'node:fs/promises';
+import { mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { Endpoint, Config, Logger, atomicWrite, ensureTrailingNewline } from '@skippy/shared';
+import {
+  Endpoint,
+  Config,
+  Logger,
+  atomicWrite,
+  ensureTrailingNewline,
+  GameEntity,
+} from '@skippy/shared';
+
+/** Formats bytes into human-readable units. */
+function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes}B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+}
+
+/** Gets file size in bytes. */
+async function getFileSizeBytes(path: string): Promise<number> {
+  const { size } = await stat(path);
+  return size;
+}
 import { Embedder, createSearchableText, saveEmbeddings } from '@skippy/search';
 import { downloadAndNormalize } from './download';
 import { generateSchema } from './generate-schema';
@@ -51,6 +71,7 @@ export async function runCache(
   logger.success('Embedding model ready');
 
   const results: CacheResult[] = [];
+  let totalBytes = 0;
 
   for (const [i, endpoint] of endpoints.entries()) {
     opts.onProgress?.(endpoint, i, endpoints.length);
@@ -59,6 +80,7 @@ export async function runCache(
     await mkdir(endpointDir, { recursive: true });
 
     const endpointLogger = logger.child({ endpoint });
+    let endpointBytes = 0;
 
     try {
       // 1. Download and normalize
@@ -69,6 +91,10 @@ export async function runCache(
       // 2. Write data atomically
       const dataPath = join(endpointDir, 'data.json');
       await atomicWrite(dataPath, ensureTrailingNewline(JSON.stringify(data, null, 2)));
+      const dataSize = await getFileSizeBytes(dataPath);
+      totalBytes += dataSize;
+      endpointBytes += dataSize;
+      endpointLogger.success(`Wrote data.json (${formatBytes(dataSize)})`);
 
       // 3. Generate and write schema atomically
       const schema = generateSchema(data);
@@ -79,14 +105,17 @@ export async function runCache(
       // 4. Generate embeddings for search
       if (data.length > 0) {
         endpointLogger.info('Generating embeddings...');
-        const texts = data.map(item =>
-          createSearchableText(endpoint, item as Record<string, unknown>)
-        );
+        const texts = data.map(item => createSearchableText(endpoint, item as GameEntity));
         const embeddings = await embedder.embedBatch(texts);
         const embeddingsPath = join(endpointDir, 'embeddings.bin');
         const dimension = embeddings[0]?.length ?? 384;
         await saveEmbeddings(embeddings, embeddingsPath, dimension);
-        endpointLogger.success(`Generated ${embeddings.length} embeddings`);
+        const embeddingsSize = await getFileSizeBytes(embeddingsPath);
+        totalBytes += embeddingsSize;
+        endpointBytes += embeddingsSize;
+        endpointLogger.success(
+          `Generated ${embeddings.length} embeddings (${formatBytes(embeddingsSize)})`
+        );
       }
 
       // 5. Generate types (if enabled)
@@ -111,6 +140,7 @@ export async function runCache(
         endpointLogger.success(`Generated fixture with ${fixture.length} items`);
       }
 
+      endpointLogger.success(`Endpoint total: ${formatBytes(endpointBytes)}`);
       results.push({ endpoint, success: true, itemCount: data.length });
     } catch (error) {
       const errorMessage = (error as Error).message;
@@ -130,7 +160,7 @@ export async function runCache(
       failed: failures.map(f => f.endpoint),
     });
   } else {
-    logger.success('Cache update complete');
+    logger.success(`Cache update complete (${formatBytes(totalBytes)} total)`);
   }
 
   return results;

@@ -1,14 +1,23 @@
 import { z } from 'zod';
-import { BaseSearchParamsSchema, BaseSearchResult, Endpoint } from '@skippy/shared';
+import {
+  BaseSearchParamsSchema,
+  BaseSearchResult,
+  Endpoint,
+  Trader,
+  SearchableEntity,
+} from '@skippy/shared';
 import { HybridSearcher, Embedder, loadEmbeddings } from '@skippy/search';
 import { join } from 'node:path';
 import type { ServerContext } from '../../server';
+import { loadSchema, validateFields, Schema } from '../../utils/schema';
 
 export const SearchTradersParamsSchema = BaseSearchParamsSchema.extend({
   // Trader-specific extensions can be added here
 });
 
 export type SearchTradersParams = z.infer<typeof SearchTradersParamsSchema>;
+
+export const TRADER_ID_FIELD = 'name';
 
 const FORBIDDEN_PATHS = ['__proto__', 'constructor', 'prototype'];
 const MAX_FIELD_DEPTH = 4;
@@ -29,19 +38,16 @@ export function validateFieldPath(path: string): void {
 }
 
 /** Gets a nested value from an object using dot notation. */
-function getNestedValue(obj: Record<string, unknown>, path: string): unknown {
+function getNestedValue(obj: object, path: string): unknown {
   return path
     .split('.')
     .reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], obj);
 }
 
-/** Extracts specified fields from an item. */
-export function extractFields(
-  item: Record<string, unknown>,
-  fields?: string[]
-): Record<string, unknown> {
+/** Extracts specified fields from a trader. */
+export function extractFields(trader: Trader, fields?: string[]): Partial<Trader> {
   if (!fields || fields.length === 0) {
-    return item;
+    return trader;
   }
 
   // Validate all field paths first
@@ -51,7 +57,7 @@ export function extractFields(
 
   const result: Record<string, unknown> = {};
   for (const field of fields) {
-    const value = getNestedValue(item, field);
+    const value = getNestedValue(trader, field);
     if (value !== undefined) {
       result[field] = value;
     }
@@ -60,12 +66,10 @@ export function extractFields(
 }
 
 /** Gets or creates a cached HybridSearcher for traders. */
-async function getSearcher(
-  context: ServerContext
-): Promise<HybridSearcher<Record<string, unknown>>> {
+async function getSearcher(context: ServerContext): Promise<HybridSearcher<Trader>> {
   const cacheKey = Endpoint.TRADERS;
   const cached = context.searcherCache.get(cacheKey);
-  if (cached) return cached;
+  if (cached) return cached as HybridSearcher<Trader>;
 
   const dataPath = join(context.dataDir, 'traders');
 
@@ -74,7 +78,7 @@ async function getSearcher(
   if (!(await dataFile.exists())) {
     throw new Error('Traders data not found. Run: skippy cache');
   }
-  const traders = (await dataFile.json()) as Record<string, unknown>[];
+  const traders = (await dataFile.json()) as Trader[];
 
   // Load embeddings
   const embeddingsPath = join(dataPath, 'embeddings.bin');
@@ -91,31 +95,53 @@ async function getSearcher(
   });
   await embedder.initialize();
 
-  const searcher = new HybridSearcher(
+  const searcher = new HybridSearcher<Trader>(
     traders,
     embeddings,
     embedder,
     Endpoint.TRADERS,
     ['name'],
-    'id'
+    TRADER_ID_FIELD
   );
 
-  context.searcherCache.set(cacheKey, searcher);
+  context.searcherCache.set(cacheKey, searcher as HybridSearcher<SearchableEntity>);
   return searcher;
+}
+
+/** Gets or creates a cached schema for traders. */
+async function getSchema(context: ServerContext): Promise<Schema | null> {
+  const cacheKey = Endpoint.TRADERS;
+  const cached = context.schemaCache.get(cacheKey);
+  if (cached) return cached;
+
+  try {
+    const schema = await loadSchema(context.dataDir, Endpoint.TRADERS);
+    context.schemaCache.set(cacheKey, schema);
+    return schema;
+  } catch {
+    return null;
+  }
 }
 
 /** Searches for traders using hybrid semantic + fuzzy search. */
 export async function searchTraders(
   params: unknown,
   context: ServerContext
-): Promise<BaseSearchResult<Record<string, unknown>>> {
+): Promise<BaseSearchResult<Partial<Trader>>> {
   const validated = SearchTradersParamsSchema.parse(params);
   const { query, fields, limit } = validated;
+
+  if (fields && fields.length > 0) {
+    const schema = await getSchema(context);
+    if (schema) {
+      validateFields(schema, fields);
+    }
+  }
 
   const searcher = await getSearcher(context);
   const results = await searcher.search(query, limit);
 
-  const extracted = results.map(item => extractFields(item, fields));
+  const extracted = results.map(trader => extractFields(trader, fields));
 
   return {
     results: extracted,
