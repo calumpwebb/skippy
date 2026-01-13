@@ -54,7 +54,7 @@ async function handleChat(request: NextRequest, session: AuthenticatedSession): 
 
   // Save the latest user message to DB
   const lastUserMessage = userMessages.findLast(message => message.role === 'user');
-  if (lastUserMessage) {
+  if (lastUserMessage?.content) {
     await db.insert(messages).values({
       id: nanoid(),
       conversationId,
@@ -83,8 +83,8 @@ async function handleChat(request: NextRequest, session: AuthenticatedSession): 
     messages: modelMessages,
     tools,
     onFinish: async ({ text }) => {
-      // Save assistant response to DB
-      if (text) {
+      // Save assistant response to DB (skip if empty/tool-only response)
+      if (text && text.trim().length > 0) {
         await db.insert(messages).values({
           id: nanoid(),
           conversationId: finalConversationId,
