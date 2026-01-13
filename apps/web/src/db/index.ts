@@ -16,7 +16,14 @@ if (!existsSync(dataDir)) {
 const sqlite = new Database(DB_PATH);
 export const db = drizzle(sqlite, { schema });
 
-// Auto-apply migrations on startup
-migrate(db, { migrationsFolder: './drizzle' });
+// Auto-apply migrations on startup (skip if already applied)
+try {
+  migrate(db, { migrationsFolder: './drizzle' });
+} catch (error) {
+  // Ignore "table already exists" errors - migrations already applied
+  if (!(error instanceof Error && error.message.includes('already exists'))) {
+    throw error;
+  }
+}
 
 export type Database = typeof db;
