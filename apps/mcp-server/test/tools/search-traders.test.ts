@@ -1,9 +1,6 @@
 import { describe, test, expect } from 'vitest';
 import { Trader } from '@skippy/shared';
-import {
-  SearchTradersParamsSchema,
-  TRADER_ID_FIELD,
-} from '../../src/tools/handlers/search-traders';
+import { SearchTradersParamsSchema } from '../../src/tools/handlers/search-traders';
 import { extractFields, validateFieldPath } from '../../src/utils/fields';
 import { validateFields, Schema } from '../../src/utils/schema';
 
@@ -31,12 +28,6 @@ describe('validateFieldPath (Traders)', () => {
 
   test('rejects forbidden paths', () => {
     expect(() => validateFieldPath('__proto__')).toThrow('Invalid field path');
-  });
-});
-
-describe('TRADER_ID_FIELD', () => {
-  test('is name', () => {
-    expect(TRADER_ID_FIELD).toBe('name');
   });
 });
 

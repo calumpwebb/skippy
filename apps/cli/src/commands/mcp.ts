@@ -1,6 +1,6 @@
 import { Command } from 'commander';
 import { getConfig, Logger } from '@skippy/shared';
-import { startServer } from '@skippy/mcp-server';
+import { startServer, loadAllData } from '@skippy/mcp-server';
 import type { ServerContext } from '@skippy/mcp-server';
 import pc from 'picocolors';
 import { validateDataDir, formatError } from '../utils/validate';
@@ -25,15 +25,19 @@ export function createMcpCommand(): Command {
         return;
       }
 
-      const context: ServerContext = {
-        config,
-        logger,
-        dataDir,
-        searcherCache: new Map(),
-        schemaCache: new Map(),
-      };
-
       try {
+        // Load all game data at startup
+        const data = await loadAllData(dataDir, config, logger);
+
+        const context: ServerContext = {
+          config,
+          logger,
+          dataDir,
+          searchers: data.searchers,
+          schemas: data.schemas,
+          events: data.events,
+        };
+
         await startServer(context);
         // Server runs until terminated
       } catch (error) {

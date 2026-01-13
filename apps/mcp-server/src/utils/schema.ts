@@ -7,7 +7,7 @@ export interface Schema {
 }
 
 export async function loadSchema(dataDir: string, endpoint: Endpoint): Promise<Schema> {
-  const schemaPath = join(dataDir, `${endpoint}.schema.json`);
+  const schemaPath = join(dataDir, endpoint, 'schema.json');
   const content = readFileSync(schemaPath, 'utf-8');
   return JSON.parse(content) as Schema;
 }

@@ -6,15 +6,9 @@ import {
   Logger,
   atomicWrite,
   ensureTrailingNewline,
+  formatBytes,
   GameEntity,
 } from '@skippy/shared';
-
-/** Formats bytes into human-readable units. */
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes}B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)}KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
-}
 
 /** Gets file size in bytes. */
 async function getFileSizeBytes(path: string): Promise<number> {

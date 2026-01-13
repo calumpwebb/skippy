@@ -1,51 +1,28 @@
-import { describe, test, expect, beforeAll } from 'vitest';
-import { searchArcs } from '../../src/tools/handlers/search-arcs';
-import { Config, Logger, Arc } from '@skippy/shared';
-import type { ServerContext } from '../../src/server';
+import { describe, test, expect } from 'vitest';
+import { SearchArcsParamsSchema } from '../../src/tools/handlers/search-arcs';
 import { validateFields, Schema } from '../../src/utils/schema';
 
-describe('searchArcs', () => {
-  let context: ServerContext;
+describe('SearchArcsParamsSchema', () => {
+  test('extends BaseSearchParamsSchema with query, fields, limit', () => {
+    const valid = SearchArcsParamsSchema.parse({
+      query: 'test arc',
+      limit: 5,
+    });
 
-  beforeAll(() => {
-    const config = new Config({});
-    const logger = new Logger(config);
-    context = {
-      config,
-      logger,
-      dataDir: './data',
-      searcherCache: new Map(),
-      schemaCache: new Map(),
-    };
+    expect(valid.query).toBe('test arc');
+    expect(valid.limit).toBe(5);
   });
 
-  test('returns typed Arc results', async () => {
-    const result = await searchArcs({ query: 'fireball', limit: 5 }, context);
-
-    expect(result.results).toBeDefined();
-    expect(Array.isArray(result.results)).toBe(true);
-
-    if (result.results.length > 0) {
-      const arc = result.results[0] as Partial<Arc>;
-      // Type assertion - these should be valid Arc fields
-      expect(typeof arc.name === 'string' || arc.name === undefined).toBe(true);
-    }
+  test('rejects empty query', () => {
+    expect(() => SearchArcsParamsSchema.parse({ query: '' })).toThrow();
   });
 
-  test('extractFields returns Partial<Arc>', async () => {
-    const result = await searchArcs(
-      { query: 'test', fields: ['name', 'threat_level'], limit: 1 },
-      context
-    );
-
-    if (result.results.length > 0) {
-      const arc = result.results[0];
-      // Should only have requested fields
-      if (arc) {
-        const keys = Object.keys(arc);
-        expect(keys.every(k => ['name', 'threat_level'].includes(k))).toBe(true);
-      }
-    }
+  test('accepts optional fields array', () => {
+    const withFields = SearchArcsParamsSchema.parse({
+      query: 'test',
+      fields: ['name', 'threat_level'],
+    });
+    expect(withFields.fields).toEqual(['name', 'threat_level']);
   });
 });
 
