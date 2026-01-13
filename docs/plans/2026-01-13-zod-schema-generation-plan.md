@@ -10,6 +10,51 @@
 
 ---
 
+## Wave Structure
+
+### Wave 1: Foundation (Tasks 1-3)
+
+**Parallel tasks:**
+
+- Task 1: extractFieldPaths utility (independent)
+- Task 2: Zod schema generator - type inference (independent)
+
+**Sequential:**
+
+- Task 3: Full schema generation (depends on Task 2)
+
+### Wave 2: Generate Schemas (Task 4)
+
+**Sequential:**
+
+- Task 4: Generate schemas for all endpoints (depends on Wave 1 complete)
+
+### Wave 3: Integration (Tasks 5-7)
+
+**Sequential:**
+
+- Task 5: Wire into cache pipeline (depends on Task 4)
+
+**Parallel tasks (after Task 5):**
+
+- Task 6: MCP data loader with Zod parsing (depends on Task 4)
+- Task 7: MCP schema utility update (depends on Tasks 1, 4)
+
+### Wave 4: Cleanup (Tasks 8-12)
+
+**Parallel tasks:**
+
+- Task 8: Update shared package exports
+- Task 9: Remove --no-types flag
+- Task 11: Audit shared code
+
+**Sequential:**
+
+- Task 10: Delete old files (after Tasks 8-9)
+- Task 12: Final verification (must be last)
+
+---
+
 ## Task 1: Create Zod Field Path Extractor
 
 Create utility to extract field paths from Zod schemas (replaces schema.json loading).
