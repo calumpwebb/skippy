@@ -1,26 +1,34 @@
 import { Config, Logger } from '@skippy/shared';
 import { startServer } from './server';
 import type { ServerContext } from './server';
+import { loadAllData } from './loaders/data-loader';
 
 // Re-export for use by CLI
 export { startServer, createServer } from './server';
 export type { ServerContext } from './server';
 export { toolRegistry } from './tools/registry';
+export { loadAllData } from './loaders/data-loader';
 
 // Only run server when executed directly
 if (import.meta.main) {
   const config = new Config(process.env);
   const logger = new Logger(config);
 
-  const context: ServerContext = {
-    config,
-    logger,
-    dataDir: config.dataDir,
-    searcherCache: new Map(),
-  };
+  loadAllData(config.dataDir, config, logger)
+    .then(data => {
+      const context: ServerContext = {
+        config,
+        logger,
+        dataDir: config.dataDir,
+        searchers: data.searchers,
+        schemas: data.schemas,
+        events: data.events,
+      };
 
-  startServer(context).catch(error => {
-    logger.error('Server failed to start', { error: error.message });
-    process.exit(1);
-  });
+      return startServer(context);
+    })
+    .catch(error => {
+      logger.error('Server failed to start', { error: error.message });
+      process.exit(1);
+    });
 }

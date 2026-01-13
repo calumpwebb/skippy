@@ -9,7 +9,6 @@ export function createCacheCommand(): Command {
   const command = new Command('cache')
     .description('Download and process game data from MetaForge API')
     .option('-d, --data-dir <path>', 'Data directory', './data')
-    .option('--no-types', 'Skip TypeScript type generation')
     .option('--no-fixtures', 'Skip test fixture generation')
     .action(async options => {
       const config = getConfig();
@@ -31,7 +30,6 @@ export function createCacheCommand(): Command {
       try {
         const results = await runCache(config, logger, {
           dataDir,
-          generateTypes: options.types,
           generateFixtures: options.fixtures,
           onProgress: (endpoint, index, total) => {
             console.log(pc.yellow(`[${index + 1}/${total}] ${endpoint}`));

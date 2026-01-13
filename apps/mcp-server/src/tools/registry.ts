@@ -1,7 +1,8 @@
-import { ToolName } from '@skippy/shared';
+import { ToolName, Endpoint } from '@skippy/shared';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ServerContext } from '../server';
+import type { Schema } from '../utils/schema';
 
 // Import handlers
 import { searchItems, SearchItemsParamsSchema } from './handlers/search-items';
@@ -9,6 +10,14 @@ import { searchArcs, SearchArcsParamsSchema } from './handlers/search-arcs';
 import { searchQuests, SearchQuestsParamsSchema } from './handlers/search-quests';
 import { searchTraders, SearchTradersParamsSchema } from './handlers/search-traders';
 import { getEvents, GetEventsParamsSchema } from './handlers/get-events';
+
+const TOOL_TO_ENDPOINT: Record<ToolName, Endpoint> = {
+  [ToolName.SEARCH_ITEMS]: Endpoint.ITEMS,
+  [ToolName.SEARCH_ARCS]: Endpoint.ARCS,
+  [ToolName.SEARCH_QUESTS]: Endpoint.QUESTS,
+  [ToolName.SEARCH_TRADERS]: Endpoint.TRADERS,
+  [ToolName.GET_EVENTS]: Endpoint.EVENTS,
+} as const;
 
 export type ToolHandler = (args: unknown, context: ServerContext) => Promise<unknown>;
 
@@ -45,6 +54,33 @@ class ToolRegistry {
           name,
           description,
           inputSchema: zodToJsonSchema(schema) as Record<string, unknown>,
+        });
+      }
+    }
+
+    return definitions;
+  }
+
+  getToolDefinitionsWithSchemas(schemas: Record<Endpoint, Schema>): ToolDefinition[] {
+    const definitions: ToolDefinition[] = [];
+
+    for (const name of Object.values(ToolName)) {
+      const zodSchema = this.schemas.get(name);
+      let description = this.descriptions.get(name);
+
+      if (zodSchema && description) {
+        const endpoint = TOOL_TO_ENDPOINT[name];
+        const schemaData = schemas[endpoint];
+
+        if (schemaData && schemaData.fields.length > 0) {
+          const fieldsList = schemaData.fields.join(', ');
+          description = `${description} Available fields: ${fieldsList}.`;
+        }
+
+        definitions.push({
+          name,
+          description,
+          inputSchema: zodToJsonSchema(zodSchema) as Record<string, unknown>,
         });
       }
     }

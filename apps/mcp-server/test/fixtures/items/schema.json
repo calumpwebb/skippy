@@ -1,0 +1,1 @@
+{ "fields": ["id", "name", "description", "stat_block.damage", "stat_block.health"] }

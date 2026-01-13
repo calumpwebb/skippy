@@ -1,0 +1,1 @@
+{ "fields": ["id", "name", "inventory", "location", "reputation_requirements"] }

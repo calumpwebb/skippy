@@ -1,6 +1,6 @@
 import { describe, test, expect, beforeAll } from 'vitest';
 import { HybridSearcher, Embedder, loadEmbeddings } from '@skippy/search';
-import { Config, Endpoint } from '@skippy/shared';
+import { Config, Endpoint, Item } from '@skippy/shared';
 import { join } from 'node:path';
 
 /**
@@ -10,7 +10,7 @@ import { join } from 'node:path';
  * the data/ directory with items and embeddings.
  */
 describe('Search Integration', () => {
-  let searcher: HybridSearcher<Record<string, unknown>> | null = null;
+  let searcher: HybridSearcher<Item> | null = null;
   let dataAvailable = false;
 
   beforeAll(async () => {
@@ -29,7 +29,7 @@ describe('Search Integration', () => {
     dataAvailable = true;
 
     // Load real data
-    const items = (await dataFile.json()) as Record<string, unknown>[];
+    const items = (await dataFile.json()) as Item[];
 
     // Load real embeddings
     const { embeddings } = await loadEmbeddings(join(dataPath, 'embeddings.bin'));
@@ -61,7 +61,7 @@ describe('Search Integration', () => {
 
     expect(results.length).toBeGreaterThan(0);
     // Should find an item with "Blue" in the name
-    const names = results.map(r => r.name as string);
+    const names = results.map(r => r.name);
     expect(names.some(n => n?.includes('Blue') || n?.includes('Light'))).toBe(true);
   });
 

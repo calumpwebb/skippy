@@ -41,13 +41,6 @@ describe('CLI', () => {
     expect(dataDirOption).toBeDefined();
   });
 
-  test('cache command has no-types option', () => {
-    const cacheCmd = createCacheCommand();
-    const options = cacheCmd.options;
-    const noTypesOption = options.find(opt => opt.long === '--no-types');
-    expect(noTypesOption).toBeDefined();
-  });
-
   test('cache command has no-fixtures option', () => {
     const cacheCmd = createCacheCommand();
     const options = cacheCmd.options;

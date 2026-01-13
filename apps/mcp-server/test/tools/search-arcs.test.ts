@@ -1,55 +1,51 @@
 import { describe, test, expect } from 'vitest';
-import {
-  SearchArcsParamsSchema,
-  extractFields,
-  validateFieldPath,
-} from '../../src/tools/handlers/search-arcs';
+import { SearchArcsParamsSchema } from '../../src/tools/handlers/search-arcs';
+import { validateFields, Schema } from '../../src/utils/schema';
 
 describe('SearchArcsParamsSchema', () => {
   test('extends BaseSearchParamsSchema with query, fields, limit', () => {
     const valid = SearchArcsParamsSchema.parse({
-      query: 'fireball arc',
+      query: 'test arc',
       limit: 5,
     });
 
-    expect(valid.query).toBe('fireball arc');
+    expect(valid.query).toBe('test arc');
     expect(valid.limit).toBe(5);
   });
 
   test('rejects empty query', () => {
     expect(() => SearchArcsParamsSchema.parse({ query: '' })).toThrow();
   });
-});
 
-describe('validateFieldPath (ARCs)', () => {
-  test('allows simple field paths', () => {
-    expect(() => validateFieldPath('name')).not.toThrow();
-    expect(() => validateFieldPath('description')).not.toThrow();
-  });
-
-  test('rejects forbidden paths', () => {
-    expect(() => validateFieldPath('__proto__')).toThrow('Invalid field path');
-    expect(() => validateFieldPath('constructor')).toThrow('Invalid field path');
+  test('accepts optional fields array', () => {
+    const withFields = SearchArcsParamsSchema.parse({
+      query: 'test',
+      fields: ['name', 'threat_level'],
+    });
+    expect(withFields.fields).toEqual(['name', 'threat_level']);
   });
 });
 
-describe('extractFields (ARCs)', () => {
-  const sampleArc = {
-    id: 'fireball',
-    name: 'Fireball',
-    description: 'Armored rolling incendiary unit',
-    threat_level: 'high',
+describe('field validation', () => {
+  const mockSchema: Schema = {
+    fields: ['id', 'name', 'description', 'threat_level', 'abilities', 'abilities.fire'],
   };
 
-  test('returns full item when no fields specified', () => {
-    const result = extractFields(sampleArc, undefined);
-    expect(result).toEqual(sampleArc);
+  test('validateFields accepts valid fields', () => {
+    expect(() => validateFields(mockSchema, ['name', 'threat_level'])).not.toThrow();
   });
 
-  test('extracts only requested fields', () => {
-    const result = extractFields(sampleArc, ['name', 'threat_level']);
-    expect(result).toEqual({ name: 'Fireball', threat_level: 'high' });
-    expect(result).not.toHaveProperty('id');
-    expect(result).not.toHaveProperty('description');
+  test('validateFields accepts nested field paths', () => {
+    expect(() => validateFields(mockSchema, ['abilities.fire'])).not.toThrow();
+  });
+
+  test('validateFields rejects invalid field paths', () => {
+    expect(() => validateFields(mockSchema, ['invalid_arc_field'])).toThrow(
+      'Invalid field: invalid_arc_field'
+    );
+  });
+
+  test('validateFields rejects partially invalid field paths', () => {
+    expect(() => validateFields(mockSchema, ['name', 'invalid'])).toThrow('Invalid field: invalid');
   });
 });

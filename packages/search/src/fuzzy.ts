@@ -11,7 +11,7 @@ export interface FuzzyResult<T> {
 }
 
 /** Fuzzy string searcher using Fuse.js. */
-export class FuzzySearcher<T extends Record<string, unknown>> {
+export class FuzzySearcher<T extends object> {
   private readonly fuse: Fuse<T>;
 
   constructor(items: T[], keys: string[], config: FuzzySearchConfig = {}) {

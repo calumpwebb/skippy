@@ -6,16 +6,20 @@ import {
   ListResourcesRequestSchema,
   ReadResourceRequestSchema,
 } from '@modelcontextprotocol/sdk/types.js';
-import { Config, Logger, ToolName } from '@skippy/shared';
+import { Config, Logger, ToolName, SearchableEntity, Endpoint, Event } from '@skippy/shared';
 import { HybridSearcher } from '@skippy/search';
 import { toolRegistry } from './tools/registry';
+import { Schema } from './utils/schema';
 import { join } from 'node:path';
+import type { SearchEndpointType } from './loaders/data-loader';
 
 export interface ServerContext {
   config: Config;
   logger: Logger;
   dataDir: string;
-  searcherCache: Map<string, HybridSearcher<Record<string, unknown>>>;
+  searchers: Record<SearchEndpointType, HybridSearcher<SearchableEntity>>;
+  schemas: Record<Endpoint, Schema>;
+  events: Event[];
 }
 
 /** Creates and configures the MCP server. */
@@ -36,10 +40,10 @@ export function createServer(context: ServerContext): Server {
   );
 
   // List available tools
-  server.setRequestHandler(ListToolsRequestSchema, async () => {
+  server.setRequestHandler(ListToolsRequestSchema, () => {
     logger.debug('Listing tools');
     return {
-      tools: toolRegistry.getToolDefinitions(),
+      tools: toolRegistry.getToolDefinitionsWithSchemas(context.schemas),
     };
   });
 
