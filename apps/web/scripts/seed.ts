@@ -65,6 +65,13 @@ db.run(`CREATE TABLE IF NOT EXISTS verifications (
   updated_at integer NOT NULL
 )`);
 
+db.run(`CREATE TABLE IF NOT EXISTS jwks (
+  id text PRIMARY KEY NOT NULL,
+  public_key text NOT NULL,
+  private_key text NOT NULL,
+  created_at integer NOT NULL
+)`);
+
 db.run(`CREATE TABLE IF NOT EXISTS conversations (
   id text PRIMARY KEY NOT NULL,
   user_id text NOT NULL,
