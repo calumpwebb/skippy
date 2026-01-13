@@ -1,5 +1,18 @@
 import { join } from 'node:path';
-import { Config, Logger, Endpoint, formatBytes, Event, SearchableEntity } from '@skippy/shared';
+import { z } from 'zod';
+import {
+  Config,
+  Logger,
+  Endpoint,
+  formatBytes,
+  Event,
+  SearchableEntity,
+  ItemSchema,
+  ArcSchema,
+  QuestSchema,
+  TraderSchema,
+  EventSchema,
+} from '@skippy/shared';
 import { HybridSearcher, Embedder, loadEmbeddings } from '@skippy/search';
 import { loadSchema, Schema } from '../utils/schema';
 
@@ -24,6 +37,14 @@ const ENDPOINT_CONFIGS: Record<SearchEndpointType, EndpointConfig> = {
   [Endpoint.ARCS]: { searchFields: ['name', 'description'], idField: 'id' },
   [Endpoint.QUESTS]: { searchFields: ['name', 'trader_name'], idField: 'id' },
   [Endpoint.TRADERS]: { searchFields: ['name'], idField: 'name' },
+};
+
+/** Zod schemas for runtime validation of loaded data. */
+const ENTITY_SCHEMAS: Record<SearchEndpointType, z.ZodArray<z.ZodTypeAny>> = {
+  [Endpoint.ITEMS]: z.array(ItemSchema),
+  [Endpoint.ARCS]: z.array(ArcSchema),
+  [Endpoint.QUESTS]: z.array(QuestSchema),
+  [Endpoint.TRADERS]: z.array(TraderSchema),
 };
 
 /** Data loaded at server startup. */
@@ -65,7 +86,8 @@ export async function loadAllData(
       throw new Error(`${endpoint} data not found at ${dataPath}. Run: skippy cache`);
     }
     const dataSize = dataFile.size;
-    const data = (await dataFile.json()) as SearchableEntity[];
+    const rawData = await dataFile.json();
+    const data = ENTITY_SCHEMAS[endpoint].parse(rawData) as SearchableEntity[];
     endpointLogger.info(`Loaded data.json (${formatBytes(dataSize)}, ${data.length} items)`);
 
     // Load and log embeddings.bin
@@ -102,7 +124,8 @@ export async function loadAllData(
     throw new Error(`Events data not found at ${eventsPath}. Run: skippy cache`);
   }
   const eventsSize = eventsFile.size;
-  const events = (await eventsFile.json()) as Event[];
+  const rawEvents = await eventsFile.json();
+  const events = z.array(EventSchema).parse(rawEvents);
   logger.info(`Loaded events/data.json (${formatBytes(eventsSize)}, ${events.length} events)`);
 
   // Load events schema
