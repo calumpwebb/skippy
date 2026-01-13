@@ -1,40 +1,5 @@
 [
   {
-    "name": "Cold Snap",
-    "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/coldsnap.webp",
-    "startTime": 1768284000000,
-    "endTime": 1768291200000
-  },
-  {
-    "name": "Launch Tower Loot",
-    "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
-    "startTime": 1768287600000,
-    "endTime": 1768291200000
-  },
-  {
-    "name": "Husk Graveyard",
-    "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
-    "startTime": 1768291200000,
-    "endTime": 1768294800000
-  },
-  {
-    "name": "Hidden Bunker",
-    "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
-    "startTime": 1768291200000,
-    "endTime": 1768294800000
-  },
-  {
-    "name": "Matriarch",
-    "map": "Blue Gate",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
-    "startTime": 1768291200000,
-    "endTime": 1768294800000
-  },
-  {
     "name": "Harvester",
     "map": "Dam",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/harvester.webp",
@@ -47,6 +12,13 @@
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
     "startTime": 1768294800000,
     "endTime": 1768298400000
+  },
+  {
+    "name": "Night Raid",
+    "map": "Dam",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768298400000,
+    "endTime": 1768302000000
   },
   {
     "name": "Night Raid",
@@ -56,23 +28,16 @@
     "endTime": 1768302000000
   },
   {
-    "name": "Night Raid",
-    "map": "Dam",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768298400000,
-    "endTime": 1768302000000
+    "name": "Uncovered Caches",
+    "map": "Spaceport",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
+    "startTime": 1768302000000,
+    "endTime": 1768305600000
   },
   {
     "name": "Night Raid",
     "map": "Buried City",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768302000000,
-    "endTime": 1768305600000
-  },
-  {
-    "name": "Uncovered Caches",
-    "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
     "startTime": 1768302000000,
     "endTime": 1768305600000
   },
@@ -84,16 +49,16 @@
     "endTime": 1768305600000
   },
   {
-    "name": "Uncovered Caches",
-    "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
+    "name": "Electromagnetic Storm",
+    "map": "Spaceport",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
     "startTime": 1768305600000,
     "endTime": 1768309200000
   },
   {
-    "name": "Electromagnetic Storm",
-    "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
+    "name": "Uncovered Caches",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
     "startTime": 1768305600000,
     "endTime": 1768309200000
   },
@@ -112,13 +77,6 @@
     "endTime": 1768312800000
   },
   {
-    "name": "Night Raid",
-    "map": "Stella Montis",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768312800000,
-    "endTime": 1768316400000
-  },
-  {
     "name": "Electromagnetic Storm",
     "map": "Dam",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
@@ -134,10 +92,10 @@
   },
   {
     "name": "Night Raid",
-    "map": "Buried City",
+    "map": "Stella Montis",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768316400000,
-    "endTime": 1768320000000
+    "startTime": 1768312800000,
+    "endTime": 1768316400000
   },
   {
     "name": "Launch Tower Loot",
@@ -147,16 +105,23 @@
     "endTime": 1768320000000
   },
   {
-    "name": "Husk Graveyard",
+    "name": "Night Raid",
     "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
-    "startTime": 1768320000000,
-    "endTime": 1768323600000
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768316400000,
+    "endTime": 1768320000000
   },
   {
     "name": "Hidden Bunker",
     "map": "Spaceport",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
+    "startTime": 1768320000000,
+    "endTime": 1768323600000
+  },
+  {
+    "name": "Husk Graveyard",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
     "startTime": 1768320000000,
     "endTime": 1768323600000
   },
@@ -183,13 +148,6 @@
   },
   {
     "name": "Night Raid",
-    "map": "Stella Montis",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768327200000,
-    "endTime": 1768330800000
-  },
-  {
-    "name": "Night Raid",
     "map": "Dam",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
     "startTime": 1768327200000,
@@ -197,10 +155,10 @@
   },
   {
     "name": "Night Raid",
-    "map": "Buried City",
+    "map": "Stella Montis",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768330800000,
-    "endTime": 1768334400000
+    "startTime": 1768327200000,
+    "endTime": 1768330800000
   },
   {
     "name": "Matriarch",
@@ -210,16 +168,23 @@
     "endTime": 1768334400000
   },
   {
-    "name": "Uncovered Caches",
+    "name": "Night Raid",
     "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
-    "startTime": 1768334400000,
-    "endTime": 1768338000000
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768330800000,
+    "endTime": 1768334400000
   },
   {
     "name": "Night Raid",
     "map": "Spaceport",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768334400000,
+    "endTime": 1768338000000
+  },
+  {
+    "name": "Uncovered Caches",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
     "startTime": 1768334400000,
     "endTime": 1768338000000
   },
@@ -245,13 +210,6 @@
     "endTime": 1768341600000
   },
   {
-    "name": "Night Raid",
-    "map": "Stella Montis",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768341600000,
-    "endTime": 1768345200000
-  },
-  {
     "name": "Electromagnetic Storm",
     "map": "Dam",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
@@ -260,10 +218,10 @@
   },
   {
     "name": "Night Raid",
-    "map": "Buried City",
+    "map": "Stella Montis",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768345200000,
-    "endTime": 1768348800000
+    "startTime": 1768341600000,
+    "endTime": 1768345200000
   },
   {
     "name": "Harvester",
@@ -273,18 +231,18 @@
     "endTime": 1768348800000
   },
   {
-    "name": "Husk Graveyard",
-    "map": "Blue Gate",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
+    "name": "Night Raid",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
     "startTime": 1768345200000,
     "endTime": 1768348800000
   },
   {
     "name": "Husk Graveyard",
-    "map": "Buried City",
+    "map": "Blue Gate",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
-    "startTime": 1768348800000,
-    "endTime": 1768352400000
+    "startTime": 1768345200000,
+    "endTime": 1768348800000
   },
   {
     "name": "Electromagnetic Storm",
@@ -294,6 +252,13 @@
     "endTime": 1768352400000
   },
   {
+    "name": "Husk Graveyard",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
+    "startTime": 1768348800000,
+    "endTime": 1768352400000
+  },
+  {
     "name": "Uncovered Caches",
     "map": "Dam",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
@@ -306,6 +271,20 @@
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
     "startTime": 1768352400000,
     "endTime": 1768356000000
+  },
+  {
+    "name": "Night Raid",
+    "map": "Dam",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768356000000,
+    "endTime": 1768359600000
+  },
+  {
+    "name": "Matriarch",
+    "map": "Blue Gate",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
+    "startTime": 1768356000000,
+    "endTime": 1768359600000
   },
   {
     "name": "Night Raid",
@@ -315,18 +294,11 @@
     "endTime": 1768359600000
   },
   {
-    "name": "Night Raid",
-    "map": "Dam",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768356000000,
-    "endTime": 1768359600000
-  },
-  {
     "name": "Matriarch",
-    "map": "Blue Gate",
+    "map": "Spaceport",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
-    "startTime": 1768356000000,
-    "endTime": 1768359600000
+    "startTime": 1768359600000,
+    "endTime": 1768363200000
   },
   {
     "name": "Night Raid",
@@ -336,23 +308,16 @@
     "endTime": 1768363200000
   },
   {
-    "name": "Matriarch",
+    "name": "Night Raid",
     "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
-    "startTime": 1768359600000,
-    "endTime": 1768363200000
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
+    "startTime": 1768363200000,
+    "endTime": 1768366800000
   },
   {
     "name": "Uncovered Caches",
     "map": "Buried City",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
-    "startTime": 1768363200000,
-    "endTime": 1768366800000
-  },
-  {
-    "name": "Night Raid",
-    "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
     "startTime": 1768363200000,
     "endTime": 1768366800000
   },
@@ -378,6 +343,13 @@
     "endTime": 1768370400000
   },
   {
+    "name": "Electromagnetic Storm",
+    "map": "Dam",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
+    "startTime": 1768370400000,
+    "endTime": 1768374000000
+  },
+  {
     "name": "Night Raid",
     "map": "Stella Montis",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
@@ -385,11 +357,11 @@
     "endTime": 1768374000000
   },
   {
-    "name": "Electromagnetic Storm",
-    "map": "Dam",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/electrical.webp",
-    "startTime": 1768370400000,
-    "endTime": 1768374000000
+    "name": "Launch Tower Loot",
+    "map": "Spaceport",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
+    "startTime": 1768374000000,
+    "endTime": 1768377600000
   },
   {
     "name": "Night Raid",
@@ -397,6 +369,27 @@
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
     "startTime": 1768374000000,
     "endTime": 1768377600000
+  },
+  {
+    "name": "Hidden Bunker",
+    "map": "Spaceport",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
+    "startTime": 1768377600000,
+    "endTime": 1768381200000
+  },
+  {
+    "name": "Husk Graveyard",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
+    "startTime": 1768377600000,
+    "endTime": 1768381200000
+  },
+  {
+    "name": "Matriarch",
+    "map": "Blue Gate",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
+    "startTime": 1768377600000,
+    "endTime": 1768381200000
   },
   {
     "name": "Prospecting Probes",
