@@ -10,58 +10,13 @@ import { HybridSearcher, Embedder, loadEmbeddings } from '@skippy/search';
 import { join } from 'node:path';
 import type { ServerContext } from '../../server';
 import { loadSchema, validateFields, Schema } from '../../utils/schema';
+import { extractFields } from '../../utils/fields';
 
 export const SearchArcsParamsSchema = BaseSearchParamsSchema.extend({
   // ARC-specific extensions can be added here
 });
 
 export type SearchArcsParams = z.infer<typeof SearchArcsParamsSchema>;
-
-const FORBIDDEN_PATHS = ['__proto__', 'constructor', 'prototype'];
-const MAX_FIELD_DEPTH = 4;
-
-/** Validates a field path for security. */
-export function validateFieldPath(path: string): void {
-  const parts = path.split('.');
-
-  if (parts.length > MAX_FIELD_DEPTH) {
-    throw new Error(`Field path too deep: ${path}`);
-  }
-
-  for (const part of parts) {
-    if (FORBIDDEN_PATHS.includes(part.toLowerCase())) {
-      throw new Error(`Invalid field path: ${path}`);
-    }
-  }
-}
-
-/** Gets a nested value from an arc using dot notation. */
-function getNestedValue(obj: Arc, path: string): unknown {
-  return path
-    .split('.')
-    .reduce<unknown>((current, key) => (current as Record<string, unknown>)?.[key], obj);
-}
-
-/** Extracts specified fields from an arc. */
-function extractFields(arc: Arc, fields?: string[]): Partial<Arc> {
-  if (!fields || fields.length === 0) {
-    return arc;
-  }
-
-  // Validate all field paths first
-  for (const field of fields) {
-    validateFieldPath(field);
-  }
-
-  const result: Partial<Arc> = {};
-  for (const field of fields) {
-    const value = getNestedValue(arc, field);
-    if (value !== undefined) {
-      (result as Record<string, unknown>)[field] = value;
-    }
-  }
-  return result;
-}
 
 /** Gets or creates a cached HybridSearcher for ARCs. */
 async function getSearcher(context: ServerContext): Promise<HybridSearcher<Arc>> {

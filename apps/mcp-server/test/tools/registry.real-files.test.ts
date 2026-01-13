@@ -4,7 +4,7 @@ import { ToolName } from '@skippy/shared';
 import { toolRegistry } from '../../src/tools/registry';
 
 describe('ToolRegistry - getToolDefinitionsWithSchemas (real file loading)', () => {
-  const dataDir = resolve(import.meta.dirname, '../../../../apps/cache/data');
+  const dataDir = resolve(import.meta.dirname, '../fixtures');
   const schemaCache = new Map();
 
   afterEach(() => {

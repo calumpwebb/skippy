@@ -1,7 +1,8 @@
-import { ToolName } from '@skippy/shared';
+import { ToolName, Endpoint } from '@skippy/shared';
 import { z } from 'zod';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import type { ServerContext } from '../server';
+import { loadSchema, Schema } from '../utils/schema';
 
 // Import handlers
 import { searchItems, SearchItemsParamsSchema } from './handlers/search-items';
@@ -9,6 +10,14 @@ import { searchArcs, SearchArcsParamsSchema } from './handlers/search-arcs';
 import { searchQuests, SearchQuestsParamsSchema } from './handlers/search-quests';
 import { searchTraders, SearchTradersParamsSchema } from './handlers/search-traders';
 import { getEvents, GetEventsParamsSchema } from './handlers/get-events';
+
+const TOOL_TO_ENDPOINT: Record<ToolName, Endpoint> = {
+  [ToolName.SEARCH_ITEMS]: Endpoint.ITEMS,
+  [ToolName.SEARCH_ARCS]: Endpoint.ARCS,
+  [ToolName.SEARCH_QUESTS]: Endpoint.QUESTS,
+  [ToolName.SEARCH_TRADERS]: Endpoint.TRADERS,
+  [ToolName.GET_EVENTS]: Endpoint.EVENTS,
+} as const;
 
 export type ToolHandler = (args: unknown, context: ServerContext) => Promise<unknown>;
 
@@ -39,6 +48,43 @@ class ToolRegistry {
     for (const name of Object.values(ToolName)) {
       const schema = this.schemas.get(name);
       const description = this.descriptions.get(name);
+
+      if (schema && description) {
+        definitions.push({
+          name,
+          description,
+          inputSchema: zodToJsonSchema(schema) as Record<string, unknown>,
+        });
+      }
+    }
+
+    return definitions;
+  }
+
+  async getToolDefinitionsWithSchemas(
+    dataDir: string | undefined,
+    schemaCache: Map<string, Schema> | undefined
+  ): Promise<ToolDefinition[]> {
+    const definitions: ToolDefinition[] = [];
+
+    for (const name of Object.values(ToolName)) {
+      const schema = this.schemas.get(name);
+      let description = this.descriptions.get(name);
+
+      if (schema && description && dataDir && schemaCache) {
+        const endpoint = TOOL_TO_ENDPOINT[name];
+        let schemaData = schemaCache.get(endpoint);
+
+        if (!schemaData) {
+          schemaData = await loadSchema(dataDir, endpoint);
+          schemaCache.set(endpoint, schemaData);
+        }
+
+        if (schemaData && schemaData.fields.length > 0) {
+          const fieldsList = schemaData.fields.join(', ');
+          description = `${description} Available fields: ${fieldsList}.`;
+        }
+      }
 
       if (schema && description) {
         definitions.push({

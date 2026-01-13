@@ -17,6 +17,7 @@ if (import.meta.main) {
     logger,
     dataDir: config.dataDir,
     searcherCache: new Map(),
+    schemaCache: new Map(),
   };
 
   startServer(context).catch(error => {

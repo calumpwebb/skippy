@@ -30,6 +30,7 @@ export function createMcpCommand(): Command {
         logger,
         dataDir,
         searcherCache: new Map(),
+        schemaCache: new Map(),
       };
 
       try {

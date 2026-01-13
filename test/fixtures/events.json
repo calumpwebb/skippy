@@ -1,37 +1,37 @@
 [
   {
-    "name": "Uncovered Caches",
-    "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/cache.webp",
-    "startTime": 1768248000000,
-    "endTime": 1768251600000
-  },
-  {
-    "name": "Night Raid",
-    "map": "Buried City",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768248000000,
-    "endTime": 1768251600000
-  },
-  {
     "name": "Cold Snap",
-    "map": "Dam",
+    "map": "Buried City",
     "icon": "https://cdn.metaforge.app/arc-raiders/custom/coldsnap.webp",
-    "startTime": 1768248000000,
-    "endTime": 1768255200000
+    "startTime": 1768284000000,
+    "endTime": 1768291200000
   },
   {
-    "name": "Harvester",
-    "map": "Blue Gate",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/harvester.webp",
-    "startTime": 1768248000000,
-    "endTime": 1768251600000
-  },
-  {
-    "name": "Night Raid",
+    "name": "Launch Tower Loot",
     "map": "Spaceport",
-    "icon": "https://cdn.metaforge.app/arc-raiders/custom/night.webp",
-    "startTime": 1768251600000,
-    "endTime": 1768255200000
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
+    "startTime": 1768287600000,
+    "endTime": 1768291200000
+  },
+  {
+    "name": "Husk Graveyard",
+    "map": "Buried City",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/husk-graveyard.webp",
+    "startTime": 1768291200000,
+    "endTime": 1768294800000
+  },
+  {
+    "name": "Hidden Bunker",
+    "map": "Spaceport",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/hiddenbunker.webp",
+    "startTime": 1768291200000,
+    "endTime": 1768294800000
+  },
+  {
+    "name": "Matriarch",
+    "map": "Blue Gate",
+    "icon": "https://cdn.metaforge.app/arc-raiders/custom/matriarch.webp",
+    "startTime": 1768291200000,
+    "endTime": 1768294800000
   }
 ]

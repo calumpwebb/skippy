@@ -1,10 +1,7 @@
 import { describe, test, expect } from 'vitest';
 import { Item } from '@skippy/shared';
-import {
-  SearchItemsParamsSchema,
-  extractFields,
-  validateFieldPath,
-} from '../../src/tools/handlers/search-items';
+import { SearchItemsParamsSchema } from '../../src/tools/handlers/search-items';
+import { extractFields, validateFieldPath } from '../../src/utils/fields';
 import { validateFields, Schema } from '../../src/utils/schema';
 
 describe('SearchItemsParamsSchema', () => {

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 import { join } from 'node:path';
 import type { ServerContext } from '../../server';
+import type { Event } from '@skippy/shared';
 
 export const GetEventsParamsSchema = z
   .object({})
@@ -10,7 +11,7 @@ export const GetEventsParamsSchema = z
 export type GetEventsParams = z.infer<typeof GetEventsParamsSchema>;
 
 export interface GetEventsResult {
-  events: Record<string, unknown>[];
+  events: Event[];
   cachedAt: string;
 }
 
@@ -26,7 +27,7 @@ export async function getEvents(
     throw new Error('Events data not found. Run: skippy cache');
   }
 
-  const events = (await file.json()) as Record<string, unknown>[];
+  const events = (await file.json()) as Event[];
   const stat = await file.stat();
 
   return {

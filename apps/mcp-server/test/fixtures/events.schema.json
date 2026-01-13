@@ -1,0 +1,1 @@
+{ "fields": ["id", "name", "schedule", "rewards", "duration", "start_time"] }

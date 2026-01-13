@@ -1,0 +1,1 @@
+{ "fields": ["id", "name", "description", "threat_level", "behavior_pattern", "weaknesses"] }

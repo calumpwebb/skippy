@@ -2,10 +2,9 @@ import { describe, test, expect } from 'vitest';
 import { Trader } from '@skippy/shared';
 import {
   SearchTradersParamsSchema,
-  extractFields,
-  validateFieldPath,
   TRADER_ID_FIELD,
 } from '../../src/tools/handlers/search-traders';
+import { extractFields, validateFieldPath } from '../../src/utils/fields';
 import { validateFields, Schema } from '../../src/utils/schema';
 
 describe('SearchTradersParamsSchema', () => {

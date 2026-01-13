@@ -1,22 +1,20 @@
 import { describe, test, expect } from 'vitest';
+import { resolve } from 'node:path';
 import { loadSchema, validateFields, Schema } from '../../src/utils/schema';
 import { Endpoint } from '@skippy/shared';
 
+const fixturesDir = resolve(import.meta.dirname, '../fixtures');
+
 describe('loadSchema', () => {
   test('loads schema from JSON file', async () => {
-    const schema = await loadSchema(
-      '/Users/calum/Development/skippy/apps/cache/data',
-      Endpoint.ITEMS
-    );
+    const schema = await loadSchema(fixturesDir, Endpoint.ITEMS);
 
     expect(schema).toHaveProperty('fields');
     expect(Array.isArray(schema.fields)).toBe(true);
   });
 
   test('throws error for non-existent endpoint', async () => {
-    await expect(
-      loadSchema('//Development/skipUsers/calumpy/apps/cache/data', 'nonexistent' as Endpoint)
-    ).rejects.toThrow();
+    await expect(loadSchema(fixturesDir, 'nonexistent' as Endpoint)).rejects.toThrow();
   });
 });
 
