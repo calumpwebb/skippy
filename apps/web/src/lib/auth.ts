@@ -16,6 +16,14 @@ export const auth = betterAuth({
   }),
   emailAndPassword: {
     enabled: true,
+    password: {
+      hash: async (password: string): Promise<string> => {
+        return await Bun.password.hash(password, { algorithm: 'bcrypt', cost: 10 });
+      },
+      verify: async ({ hash, password }: { hash: string; password: string }): Promise<boolean> => {
+        return await Bun.password.verify(password, hash);
+      },
+    },
   },
   plugins: [
     jwt({
