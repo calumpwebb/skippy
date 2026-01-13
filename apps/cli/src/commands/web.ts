@@ -5,9 +5,10 @@ import pc from 'picocolors';
 
 /** Finds the apps/web directory relative to CLI package. */
 function getWebAppDir(): string {
-  // CLI is at apps/cli, web is at apps/web
-  const cliDir = dirname(dirname(dirname(new URL(import.meta.url).pathname)));
-  return resolve(cliDir, 'web');
+  // This file is at apps/cli/src/commands/web.ts
+  // Go up 4 levels to apps/, then into web/
+  const appsDir = dirname(dirname(dirname(dirname(new URL(import.meta.url).pathname))));
+  return resolve(appsDir, 'web');
 }
 
 /** Creates the web command. */
