@@ -21,7 +21,8 @@ try {
   migrate(db, { migrationsFolder: './drizzle' });
 } catch (error) {
   // Ignore "table already exists" errors - migrations already applied
-  if (!(error instanceof Error && error.message.includes('already exists'))) {
+  const errorStr = String(error) + String((error as Error)?.cause ?? '');
+  if (!errorStr.includes('already exists')) {
     throw error;
   }
 }
